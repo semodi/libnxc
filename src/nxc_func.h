@@ -44,6 +44,8 @@ public:
   void exc_vxc_fs(int np, double rho[], double * exc, double vrho[],
                         double forces[], double stress[]);
 
+  
+
 private:
   func_param param;
   std::map<std::string, modules> all_mods;
@@ -52,6 +54,9 @@ private:
   bool models_loaded = false;
   bool any_onrank = true;
   torch::Tensor U, V_cell , V_ucell, tcell, tgrid, tgrid_d, tpos, tpos_flat, my_box;
+  bool self_consistent = true;
+  bool last_step = false;
+  bool agnostic = false;
   std::vector<int>  isa_glob;
   std::vector<std::string> symbols;
   torch::Tensor epsilon = torch::zeros({3,3}, options_dp);

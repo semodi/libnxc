@@ -27,6 +27,19 @@ AtomicFunc::AtomicFunc(std::string modeldir){
           ns++;
           model_symbols.push_back(file.substr(file.find(xc_str) + xc_str.size()));
         }
+        else if(file.find("NO_SC") != std::string::npos){
+#ifdef MPI
+    if (MPI_RANK==0)
+#endif
+          std::cout << "Warning: Not using NeuralXC self-consistently" << std::endl;
+          self_consistent=false;
+        }else if(file.find("AGN") != std::string::npos){
+#ifdef MPI
+    if (MPI_RANK==0)
+#endif
+          std::cout << "Model is species agnostic" << std::endl;
+          agnostic=true;
+        }
     }
     std::string path;
     std::string symbol;
@@ -80,21 +93,22 @@ void AtomicFunc::init(func_param fp){
   symbols.resize(fp.ns);
   for(int i = 0; i<2*fp.ns; i+=2){
     std::string symbol_string(fp.symbols + i,2);
+    if (agnostic){
+      symbol_string = "X ";
+    }
     symbols[i/2] = symbol_string;
   }
   this->build_basis();
 }
 
 void AtomicFunc::exc_vxc(int np, double rho[], double * exc, double vrho[]){
-  int ns = all_mods.size();
+  if (self_consistent || last_step){
+  int ns = symbols.size();
   int nua = tpos.size(0);
   std::vector<bool> on_rank;
   on_rank.resize(nua);
   torch::Tensor trho= torch::from_blob(rho, np, options_dp.requires_grad(true));
-  // torch::Tensor trho_view = trho.view({grid_glob[2], grid_glob[1], grid_glob[0]}).transpose(0,2);
   torch::Tensor trho_view = trho.view({box_dim[2], box_dim[1], box_dim[0]}).transpose(0,2);
-  // Need one energy accumulator for backwarding and one for MPI to avoid double
-  // counting
   torch::Tensor E = torch::zeros({1}, options_dp);
 
   at::Tensor this_pos, rad, ang, e, descr[nua], descr_glob[nua];
@@ -162,17 +176,19 @@ void AtomicFunc::exc_vxc(int np, double rho[], double * exc, double vrho[]){
   }
   E = E/RY;
   if (any_onrank){
-    E.backward();
+    if (self_consistent){
+      E.backward();
 
-    torch::Tensor Vnxc = trho.grad()/V_cell;
-    double *grad =  Vnxc.data_ptr<double>();
-    for(int i = 0; i < np; ++i){
-      vrho[i] += grad[i];
+      torch::Tensor Vnxc = trho.grad()/V_cell;
+      double *grad =  Vnxc.data_ptr<double>();
+      for(int i = 0; i < np; ++i){
+        vrho[i] += grad[i];
+      }
     }
   }
   double E_data = *E.data_ptr<double>();
   *exc += E_data;
-
+  }
 }
 
 
@@ -180,18 +196,19 @@ void AtomicFunc::exc_vxc_fs(int np, double rho[], double * exc, double vrho[],
                         double forces[], double stress[]){
 
   int nua = tpos.size(0);
-  tpos_flat.requires_grad_(true);
-
-  epsilon.requires_grad_(true);
-
+  if (self_consistent){
+    tpos_flat.requires_grad_(true);
+    epsilon.requires_grad_(true);
+  }
   tpos = tpos_flat.view({nua,3});
 
-
+  last_step=true;
   build_basis();
   this->exc_vxc(np, rho, exc, vrho);
+  last_step=false;
 
   torch::Tensor force_corr, stress_corr;
-  if (any_onrank){
+  if (any_onrank && self_consistent){
     force_corr = tpos_flat.grad();
     stress_corr = epsilon.grad()/V_ucell;
   }else{
@@ -229,7 +246,7 @@ void AtomicFunc::exc_vxc_fs(int np, double rho[], double * exc, double vrho[],
 
 
 void AtomicFunc::build_basis(){
-  int ns = all_mods.size();
+  int ns = symbols.size();
   int nua = tpos.size(0);
   at::Tensor this_pos, rad, ang;
 
