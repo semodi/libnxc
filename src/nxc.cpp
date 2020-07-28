@@ -11,11 +11,11 @@ void nxc_func_init(nxc_func_type* p, std::string modeldir, func_param fp){
     p->func = f;
 }
 
-void nxc_lda_exc_vxc(nxc_func_type* p, int np, double rho[], double * exc, double vrho[]){
+void nxc_lda_exc_vxc(nxc_func_type* p, int np, double rho[], double exc[], double vrho[]){
   p->func->exc_vxc(np, rho, exc, vrho);
 }
 
-void nxc_lda_exc_vxc_fs(nxc_func_type* p, int np, double rho[], double * exc, double vrho[],
+void nxc_lda_exc_vxc_fs(nxc_func_type* p, int np, double rho[], double exc[], double vrho[],
                         double forces[], double stress[]){
 
     p->func->exc_vxc_fs(np, rho, exc, vrho, forces, stress) ;

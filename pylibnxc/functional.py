@@ -51,6 +51,11 @@ class AtomicFunc(NXCFunctional):
             if 'xc' in os.path.basename(mp):
                 self.energy_models[mp.split('_')[-1]] =\
                  torch.jit.load(mp)
+            if 'NO_SC' in os.path.basename(mp):
+                self.no_sc = True
+            if 'AGN' in os.path.basename(mp):
+                self.spec_agn = True
+
         print('NeuralXC: Model successfully loaded')
 
     def initialize(self, **kwargs):
@@ -80,6 +85,8 @@ class AtomicFunc(NXCFunctional):
         self.positions_we = torch.mm(torch.eye(3) + self.epsilon, self.positions.T).T
         # self.positions = torch.mm(self.positions_scaled,self.unitcell)
         self.species = kwargs['species']
+        if self.spec_agn:
+            self.species = ['X' for s in self.species]
         if periodic:
             U = torch.einsum('ij,i->ij', self.unitcell, 1/self.grid)
             self.V_cell = torch.abs(torch.det(U))
@@ -118,6 +125,10 @@ class AtomicFunc(NXCFunctional):
             inp = {"rho": np.asarray(inp, dtype=np.double)}
         elif isinstance(inp, np.ndarray):
             inp = {"rho": np.asarray(inp["rho"], dtype=np.double)}
+
+        if self.no_sc:
+            self.do_vxc = False
+            self.do_forces = False
 
         if do_forces and not do_vxc:
             raise Exception('Vxc needs to be evaluated to compute pulay force correction')

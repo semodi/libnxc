@@ -39,8 +39,8 @@ class PySCFNXC(NXCAdapter):
 
     def compute(self, *args, **kwargs):
         output = self._adaptee.compute(*args, **kwargs)
-        E = output['zk']
-        V = output['vrho']
+        E = output.get('zk', 0)
+        V = output.get('vrho', 0)
         E /= Hartree
         V /= Hartree
         return E, V

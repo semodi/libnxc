@@ -4,6 +4,7 @@
 #include <torch/script.h> // One-stop header.
 
 const double RY = 13.605693012183622;
+const double HARTREE = 27.211386024367243;
 const auto options_dp = torch::TensorOptions().dtype(torch::kFloat64);
 const auto options_int = torch::TensorOptions().dtype(torch::kInt);
 
@@ -14,14 +15,14 @@ struct modules{
 };
 
 struct func_param{
-  double * pos;
-  int nua;
-  double * cell;
-  int * grid;
-  int * isa;
-  char * symbols;
-  int ns;
-  int * myBox;
+  double * pos; // atomic positions
+  int nua; // number of atoms (pos.size())
+  double * cell; // lattice vectors
+  int * grid; // number of grid points for each LV
+  int * isa; // species index for every atom  (relates to symbols array)
+  char * symbols; //distinct symbols
+  int ns; // symbols.size()
+  int * myBox; // box in simulation cell (used mainly for MPI decomposition)
 };
 
 class NXCFunc {
@@ -44,7 +45,7 @@ public:
   void exc_vxc_fs(int np, double rho[], double * exc, double vrho[],
                         double forces[], double stress[]);
 
-  
+
 
 private:
   func_param param;
