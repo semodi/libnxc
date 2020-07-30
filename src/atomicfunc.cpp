@@ -13,10 +13,10 @@ std::shared_ptr<AtomicFunc> get_functional(std::string modeldir)
 
 AtomicFunc::AtomicFunc(std::string modeldir){
 
-#ifdef MPI
-    if (MPI_RANK==0)
-#endif
-      std::cout << "Loading NeuralXC model from " << modeldir <<  std::endl;
+// #ifdef MPI
+//     if (MPI_RANK==0)
+// #endif
+//       std::cout << "Loading NeuralXC model from " << modeldir <<  std::endl;
 
     std::string xc_str = "xc_";
     std::vector<std::string> model_symbols;
@@ -29,15 +29,13 @@ AtomicFunc::AtomicFunc(std::string modeldir){
         }
         else if(file.find("NO_SC") != std::string::npos){
 #ifdef MPI
-    if (MPI_RANK==0)
+    // if (MPI_RANK==0) std::cout << "Warning: Not using NeuralXC self-consistently" << std::endl;
 #endif
-          std::cout << "Warning: Not using NeuralXC self-consistently" << std::endl;
           self_consistent=false;
         }else if(file.find("AGN") != std::string::npos){
 #ifdef MPI
-    if (MPI_RANK==0)
+    // if (MPI_RANK==0) std::cout << "Model is species agnostic" << std::endl;
 #endif
-          std::cout << "Model is species agnostic" << std::endl;
           agnostic=true;
         }
     }
