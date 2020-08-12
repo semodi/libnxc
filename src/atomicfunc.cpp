@@ -88,6 +88,7 @@ void AtomicFunc::init(func_param fp){
   V_ucell = torch::abs(torch::det(tcell));
   all_rads.resize(fp.nua);
   all_angs.resize(fp.nua);
+  all_boxes.resize(fp.nua);
   symbols.resize(fp.ns);
   for(int i = 0; i<2*fp.ns; i+=2){
     std::string symbol_string(fp.symbols + i,2);
@@ -109,7 +110,7 @@ void AtomicFunc::exc_vxc(int np, double rho[], double exc[], double vrho[]){
   torch::Tensor trho_view = trho.view({box_dim[2], box_dim[1], box_dim[0]}).transpose(0,2);
   torch::Tensor E = torch::zeros({1}, options_dp);
 
-  at::Tensor this_pos, rad, ang, e, descr[nua], descr_glob[nua];
+  at::Tensor this_pos, rad, ang, box, e, descr[nua], descr_glob[nua];
   torch::Tensor scaler = torch::eye({3}) + epsilon;
   any_onrank=false;
   // Get descriptors
@@ -120,7 +121,8 @@ void AtomicFunc::exc_vxc(int np, double rho[], double exc[], double vrho[]){
       this_pos = tpos.select(0,ia);
       rad = all_rads[ia];
       ang = all_angs[ia];
-      if (rad.size(-1)*rad.size(-2)*rad.size(-3) == 0)
+      box = all_boxes[ia];
+      if (rad.size(-1) == 0)
       {
         descr[ia] = torch::zeros({0}, options_dp);
         on_rank[ia] = false;
@@ -128,7 +130,7 @@ void AtomicFunc::exc_vxc(int np, double rho[], double exc[], double vrho[]){
       else
       {
         descr[ia] = all_mods[symbols[struct_idx]].projector.forward({trho_view, torch::mv(scaler,this_pos), torch::mm(tcell,scaler),
-            tgrid_d,  rad, ang, my_box}).toTensor();
+            tgrid_d,  rad, ang, box}).toTensor();
         on_rank[ia] = true;
         any_onrank = true;
       }
@@ -268,6 +270,7 @@ void AtomicFunc::build_basis(){
                                                                 tgrid_d,  my_box});
       all_rads[ia] = output.toTuple()->elements()[0].toTensor();
       all_angs[ia] = output.toTuple()->elements()[1].toTensor();
+      all_boxes[ia] = output.toTuple()->elements()[2].toTensor();
     }
   }
 

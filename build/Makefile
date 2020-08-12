@@ -26,6 +26,10 @@ libnxc_serial.so: atomicfunc.o nxc.o nxc_f90.o
 libnxc_mpi.so: atomicfunc.o nxc.o nxc_f90.o
 	$(FC) *.o -DBOOST_MATH_DISABLE_FLOAT128 -fPIC  -Wl,-rpath,/lib -L/lib  -Wl,-rpath,$(TORCH)/lib/ $(TORCH)/lib/libtorch.so $(TORCH)/lib/libc10.so -Wl,--no-as-needed,$(TORCH)/lib/libtorch_cpu.so -Wl,--as-needed $(TORCH)/lib/libc10.so -lpthread -Wl,--no-as-needed,$(TORCH)/lib/libtorch.so -Wl,--as-needed -lgfortran -lquadmath -lstdc++ -shared -o libnxc.so
 	@mv libnxc.so ../libnxc_mpi.so
+
+libnxc_dev.so: atomicfunc.o nxc.o nxc_f90.o
+	$(FC) *.o -DBOOST_MATH_DISABLE_FLOAT128 -fPIC  -Wl,-rpath,/lib -L/lib  -Wl,-rpath,$(TORCH)/lib/ $(TORCH)/lib/libtorch.so $(TORCH)/lib/libc10.so -Wl,--no-as-needed,$(TORCH)/lib/libtorch_cpu.so -Wl,--as-needed $(TORCH)/lib/libc10.so -lpthread -Wl,--no-as-needed,$(TORCH)/lib/libtorch.so -Wl,--as-needed -lgfortran -lquadmath -lstdc++ -shared -o libnxc.so
+	@mv libnxc.so ../libnxc_dev.so
 #
 #
 #

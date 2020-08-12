@@ -52,6 +52,7 @@ private:
   std::map<std::string, modules> all_mods;
   std::vector<at::Tensor> all_rads;
   std::vector<at::Tensor> all_angs;
+  std::vector<at::Tensor> all_boxes;
   bool models_loaded = false;
   bool any_onrank = true;
   torch::Tensor U, V_cell , V_ucell, tcell, tgrid, tgrid_d, tpos, tpos_flat, my_box;
