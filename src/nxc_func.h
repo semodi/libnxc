@@ -23,6 +23,7 @@ struct func_param{
   char * symbols; //distinct symbols
   int ns; // symbols.size()
   int * myBox; // box in simulation cell (used mainly for MPI decomposition)
+  int edens;
 };
 
 class NXCFunc {
@@ -64,6 +65,7 @@ private:
   torch::Tensor epsilon = torch::zeros({3,3}, options_dp);
   int * grid_glob;
   int box_dim[3];
+  bool edens;
 
   void build_basis();
 

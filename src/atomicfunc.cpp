@@ -63,6 +63,7 @@ AtomicFunc::AtomicFunc(std::string modeldir){
 
 void AtomicFunc::init(func_param fp){
 
+  edens = fp.edens;
   int npos = (fp.nua) * 3;
   tpos_flat = torch::from_blob(fp.pos, npos, options_dp).clone();
   tpos_flat += 1e-7;
@@ -72,7 +73,6 @@ void AtomicFunc::init(func_param fp){
   tgrid_d = tgrid.clone().to(torch::kFloat64);
   U = torch::zeros({3,3}, options_dp);
   my_box = torch::from_blob(fp.myBox,6, options_int).view({3,2}).clone();
-
 
 
   for(int i = 0; i< 3; ++i){
@@ -102,6 +102,7 @@ void AtomicFunc::init(func_param fp){
 
 void AtomicFunc::exc_vxc(int np, double rho[], double exc[], double vrho[]){
   // if (self_consistent || last_step){
+
   int ns = symbols.size();
   int nua = tpos.size(0);
   std::vector<bool> on_rank;
@@ -187,16 +188,20 @@ void AtomicFunc::exc_vxc(int np, double rho[], double exc[], double vrho[]){
       }
     }
   }
-
-  double grid_factor  = (double(np))/double(*(torch::prod(tgrid).data_ptr<long>()));
-  // std::cout << "Grid factor " << grid_factor << std::endl;
-  torch::Tensor qtot = torch::sum(trho)*V_cell;
-  // std::cout << "Charge int " << qtot << std::endl;
-  torch::Tensor t_exc =E/qtot*torch::ones_like(trho)*grid_factor;
-  // std::cout << "Double check " << torch::sum(trho*t_exc)*V_cell << std::endl;
-  double *E_data = t_exc.data_ptr<double>();
-  for(int i=0; i < np; ++i){
-    exc[i] += E_data[i];
+  if (edens){
+    double grid_factor  = (double(np))/double(*(torch::prod(tgrid).data_ptr<long>()));
+    // std::cout << "Grid factor " << grid_factor << std::endl;
+    torch::Tensor qtot = torch::sum(trho)*V_cell;
+    // std::cout << "Charge int " << qtot << std::endl;
+    torch::Tensor t_exc =E/qtot*torch::ones_like(trho)*grid_factor;
+    // std::cout << "Double check " << torch::sum(trho*t_exc)*V_cell << std::endl;
+    double *E_data = t_exc.data_ptr<double>();
+    for(int i=0; i < np; ++i){
+      exc[i] += E_data[i];
+    }
+  }else{
+    double *E_data = E.data_ptr<double>();
+    exc[0] += E_data[0];
   }
   // }
 }
