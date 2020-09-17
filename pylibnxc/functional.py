@@ -36,9 +36,15 @@ class AtomicFunc(NXCFunctional):
 
     def __init__(self, path):
         model_paths = glob(path + '/*')
+
+        if not os.path.exists(path):
+            raise Exception('Model not found, please if path correct')
+
         self.basis_models = {}
         self.projector_models = {}
         self.energy_models = {}
+        self.spec_agn = False
+        self.no_sc = False
         print('NeuralXC: Loading model from ' + path)
 
         for mp in model_paths:
@@ -55,6 +61,7 @@ class AtomicFunc(NXCFunctional):
                 self.no_sc = True
             if 'AGN' in os.path.basename(mp):
                 self.spec_agn = True
+
 
         print('NeuralXC: Model successfully loaded')
 
@@ -100,9 +107,9 @@ class AtomicFunc(NXCFunctional):
             self.my_box[:,1] = 1
 
         with torch.jit.optimized_execution(should_optimize=True):
-            self.compute_basis(False)
+            self._compute_basis(False)
 
-    def compute_basis(self, positions_grad=False):
+    def _compute_basis(self, positions_grad=False):
         self.positions.requires_grad = positions_grad
         self.positions_we = torch.mm(torch.eye(3) + self.epsilon, self.positions.T).T
         if positions_grad:
@@ -114,24 +121,54 @@ class AtomicFunc(NXCFunctional):
 
         self.radials = []
         self.angulars = []
+        self.boxes = []
         for pos, spec in zip(positions, self.species):
-            rad, ang = self.basis_models[spec](pos, unitcell, self.grid, self.my_box)
+            rad, ang, box= self.basis_models[spec](pos, unitcell, self.grid, self.my_box)
             self.radials.append(rad)
             self.angulars.append(ang)
+            self.boxes.append(box)
+
+    def _compute_from_descriptors(self, inp, do_exc=True, do_vxc=True, do_forces=False):
+
+        rho = inp["c"]
+        output = {}
+
+        with torch.jit.optimized_execution(should_optimize=True):
+            rho = {spec: torch.from_numpy(rho[spec]).double() for spec in rho}
+            if do_vxc:
+                for spec in rho:
+                    rho[spec].requires_grad = True
+            e_list = []
+            for spec in rho:
+                e_list.append(self.energy_models[spec](rho[spec]))
+
+            E = torch.sum(torch.cat(e_list))
+            if do_vxc:
+                E.backward()
+                V = {spec: rho[spec].grad.detach().numpy() for spec in rho}
+                output['dEdC'] = V
+            output['zk'] = E.detach().numpy()
+
+            return output
 
     def compute(self, inp, do_exc=True, do_vxc=True, do_forces=False):
 
         if isinstance(inp, np.ndarray):
             inp = {"rho": np.asarray(inp, dtype=np.double)}
-        elif isinstance(inp, np.ndarray):
-            inp = {"rho": np.asarray(inp["rho"], dtype=np.double)}
 
         if self.no_sc:
-            self.do_vxc = False
-            self.do_forces = False
+            do_vxc = False
+            do_forces = False
 
         if do_forces and not do_vxc:
             raise Exception('Vxc needs to be evaluated to compute pulay force correction')
+        if "rho" in inp and "c" in inp:
+            raise Exception('Error: Both density "rho" and descriptors "c" provided in input.')
+
+
+        if "c" in inp:
+            do_forces = False
+            return self._compute_from_descriptors(inp, do_exc, do_vxc, do_forces)
         rho = inp["rho"]
 
         output = {}
@@ -144,23 +181,24 @@ class AtomicFunc(NXCFunctional):
 
         with torch.jit.optimized_execution(should_optimize=True):
             if do_forces:
-                self.compute_basis(True)
+                self._compute_basis(True)
             self.descriptors = {spec:[] for spec in self.species}
             rho = torch.from_numpy(rho).double()
-            rho.requires_grad = True
+            if do_vxc:
+                rho.requires_grad = True
             e_list = []
-            for pos, spec, rad, ang in zip(positions, self.species,
-                                                self.radials, self.angulars):
+            for pos, spec, rad, ang, box in zip(positions, self.species,
+                                                self.radials, self.angulars,
+                                                self.boxes):
                 e_list.append(self.energy_models[spec](
                     self.projector_models[spec](rho, pos,
                                                 unitcell,
                                                 self.grid,
-                                                rad, ang, self.my_box).unsqueeze(0)
+                                                rad, ang, box).unsqueeze(0)
                                                 )
                                             )
 
             E = torch.sum(torch.cat(e_list))
-            output['zk'] = E.detach().numpy()
             if do_vxc:
                 E.backward()
                 V = (rho.grad/self.V_cell).detach().numpy()
@@ -169,5 +207,6 @@ class AtomicFunc(NXCFunctional):
                     forces =  np.concatenate([-self.positions.grad.detach().numpy(),
                         self.epsilon.grad.detach().numpy()/self.V_ucell])
                     output['forces'] = forces
+            output['zk'] = E.detach().numpy()
 
             return output

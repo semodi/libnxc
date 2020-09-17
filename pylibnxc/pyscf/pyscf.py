@@ -1,8 +1,6 @@
 import pyscf
 from pyscf import gto, dft
 from pyscf.dft import RKS
-from pyscf.scf import hf, RHF, RKS
-from pyscf.scf.chkfile import load_scf
 from pyscf.lib.numpy_helper import NPArrayWithTag
 from ..adapters import get_nxc_adapter
 import numpy as np
