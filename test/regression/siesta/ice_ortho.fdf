@@ -1,0 +1,68 @@
+# Water molecule for simplex minimisation
+
+SystemName          ice-1h
+SystemLabel         ice1h
+
+#LongOutput
+#WriteCoorXmol
+#WriteMDXmol
+#WriteMDHistory
+#MM.Water.Potential   CUSTOM_2_QZP8
+
+NumberOfAtoms          72
+NumberOfSpecies        2
+
+XC.functional GGA
+XC.authors    PBE
+
+%block ChemicalSpeciesLabel
+  1   8  O
+  2   1  H  
+%endblock ChemicalSpeciesLabel
+
+#%block PAO.Basis # QZDPQ-8.5
+#O 3
+#n=2 0 4 E 50. 7.5
+#    8.0 5.0 3.5 2.0
+#n=2 1 4 E 10. 8.3
+#    8.5 5.0 3.5 2.0
+#n=3 2 2 E 40. 8.3 Q 6.
+#    8.5 2.2
+#H 2
+#n=1 0 4 E 50. 8.3
+#    8.5 5.0 3.5 2.0
+#n=2 1 2 E 20. 7.8 Q 3.5
+#    8.0 2.0
+#%endblock PAO.Basis
+
+LatticeConstant       1.00 Ang    # Lattice constant alat (3% larger)
+%block LatticeVectors
+ 7.678    0.000  0.000
+ 0.000    13.298 0.000
+ 0.000    0.000  7.234
+%endblock LatticeVectors
+
+kgrid_cutoff   5.0 Ang
+
+MeshCutoff           500.0 Ry       # Mesh cutoff. real space mesh
+
+# SCF options
+MaxSCFIterations      50            # Maximum number of SCF iter
+DM.MixingWeight       0.3           # New DM amount for next SCF cycle
+DM.Tolerance          1.d-5         # Tolerance in maximum difference
+DM.NumberPulay         3
+DM.UseSaveDM T
+
+SolutionMethod        diagon        # OrderN or Diagon
+ElectronicTemperature  5 meV        # Temp. for Fermi smearing
+
+AtomicCoordinatesFormat             <ortho_xyz.fdf
+AtomicCoordinatesAndAtomicSpecies   <ortho_xyz.fdf
+
+#NeuralXC model.jit
+#MD.UseSaveXV
+#MD.TypeOfRun  CG
+#MD.VariableCell  .false.
+#MD.NumCGsteps     100
+#MD.MaxForceTol    0.01 eV/Ang
+

@@ -13,6 +13,8 @@
       character(len=2)      :: nxc_symbols(1)
       integer               :: ispec, ierr
       character(len=100)    :: nxc_path
+      character(len=8)      :: GREEN= "\033[92m";
+      character(len=8)      :: END_= "\033[0m";
       integer               :: MPIRank
       integer               :: myBox(2,3)
       real(8)              :: xua(3,1)
@@ -27,7 +29,8 @@
       call nxc_f90_func_init(xua ,nua, ucell, grid, isua, nxc_symbols, &
         1, ierr, nxc_path, LEN_TRIM(nxc_path), myBox, edens)
 
-      write(*,*) "OK!"
+      write(*,*) achar(27),'[92m',"OK!", &
+         achar(27),'[0m'
 
       END PROGRAM test 
 

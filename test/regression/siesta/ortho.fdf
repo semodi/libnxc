@@ -1,0 +1,53 @@
+%block PAO.Basis
+O     3     -0.24233
+n=2   0   2   E    23.36061     3.39721
+     4.50769     2.64066
+     1.00000     1.00000
+n=2   1   2   E     2.78334     5.14253
+     6.14996     2.59356
+     1.00000     1.00000
+n=3   2   1   E    63.98188     0.16104
+     3.54403
+     1.00000
+H 2      0.46527
+n=1   0   2   E    99.93138     2.59932
+     4.20357     1.84463
+     1.00000     1.00000
+n=2   1   1   E    24.56504     2.20231
+     3.52816
+     1.00000
+%endblock PAO.Basis
+XC.authors  PBE
+XC.functional  GGA
+SCF.Mixer.Method Pulay
+SCF.Mixer.Weight 0.3
+SCF.Mixer.History 7
+SCF.DM.Tolerance 0.0002
+SCF.H.Converge F
+SCF.EDM.Converge F
+SCF.FreeE.Converge T
+#SAVERHOXC T
+systemname siesta
+systemlabel siesta
+numberofspecies 2
+numberofatoms 3
+%block chemicalspecieslabel
+    1 8 O
+    2 1 H
+%endblock chemicalspecieslabel
+%block latticevectors
+    1.000000000     0.000000000000000     0.000000000000000
+    0.000000000000000    1.0000000000     0.000000000000000
+    0.000000000000000     0.000000000000000     1.010000000
+%endblock latticevectors
+atomiccoordinatesformat Fractional
+%block atomiccoordinatesandatomicspecies
+       0.00000001     	0.00		0.00  1
+       0.00     	0.10     	0.00  2
+       0.00000001       0.00     	0.10  2
+%endblock atomiccoordinatesandatomicspecies
+maxscfiterations 200
+MeshCutoff  500 Ry
+Latticeconstant 10 Ang # Relaxed lattice for NXC-W01
+#Latticeconstant 6.62 Ang # Relaxed lattice for PBE
+#kgridcutoff 10 Ang
