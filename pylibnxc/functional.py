@@ -151,7 +151,7 @@ class AtomicFunc(NXCFunctional):
 
             return output
 
-    def compute(self, inp, do_exc=True, do_vxc=True, do_forces=False):
+    def compute(self, inp, do_exc=True, do_vxc=True, do_forces=False, edens=True):
 
         if isinstance(inp, np.ndarray):
             inp = {"rho": np.asarray(inp, dtype=np.double)}
@@ -179,6 +179,7 @@ class AtomicFunc(NXCFunctional):
             unitcell = self.unitcell
             positions = self.positions
 
+        rho_np = rho
         with torch.jit.optimized_execution(should_optimize=True):
             if do_forces:
                 self._compute_basis(True)
@@ -207,6 +208,13 @@ class AtomicFunc(NXCFunctional):
                     forces =  np.concatenate([-self.positions.grad.detach().numpy(),
                         self.epsilon.grad.detach().numpy()/self.V_ucell])
                     output['forces'] = forces
-            output['zk'] = E.detach().numpy()
+
+            E = E.detach()
+            if edens:
+                grid_factor = len(rho.flatten())/torch.prod(self.grid).detach().numpy()
+                qtot = torch.sum(rho*self.V_cell).detach().numpy()
+                output['zk'] = E/qtot*np.ones_like(rho_np)*grid_factor
+            else:
+                output['zk'] = E
 
             return output

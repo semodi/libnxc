@@ -14,28 +14,6 @@ struct modules{
     torch::jit::script::Module energy;
 };
 
-struct func_param{
-  double * pos; // atomic positions
-  int nua; // number of atoms (pos.size())
-  double * cell; // lattice vectors
-  int * grid; // number of grid points for each LV
-  int * isa; // species index for every atom  (relates to symbols array)
-  char * symbols; //distinct symbols
-  int ns; // symbols.size()
-  int * myBox; // box in simulation cell (used mainly for MPI decomposition)
-  int edens;
-};
-
-class NXCFunc {
-
-public:
-  NXCFunc(){};
-  virtual void init(){};
-  virtual void init(func_param fp){};
-  virtual void exc_vxc(int np, double rho[], double * exc, double vrho[])=0;
-  virtual void exc_vxc_fs(int np, double rho[], double * exc, double vrho[],
-                        double forces[], double stress[])=0;
-};
 
 class AtomicFunc : public NXCFunc {
 
@@ -71,9 +49,6 @@ private:
 
 };
 
-struct nxc_func_type{
-  std::shared_ptr <NXCFunc> func;
-};
 
 std::shared_ptr<AtomicFunc> get_functional(std::string modeldir);
 #endif

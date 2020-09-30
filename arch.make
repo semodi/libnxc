@@ -1,7 +1,7 @@
 CXX = mpic++
 CC = gcc
-FC = mpif90
-FC_SERIAL = gfortran
+FC = mpif90 --free-form
+FC_SERIAL = gfortran --free-form
 
 
 LDFLAGS =-L/usr/lib/ -lgfortran

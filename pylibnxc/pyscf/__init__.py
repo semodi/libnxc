@@ -1,1 +1,1 @@
-from .pyscf import compute_KS, RKS
+from .pyscf import RKS

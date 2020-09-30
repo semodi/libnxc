@@ -11,6 +11,11 @@ void nxc_func_init(nxc_func_type* p, std::string modeldir, func_param fp){
     p->func = f;
 }
 
+void nxc_func_init(nxc_func_type* p, std::string modeldir){
+    std::shared_ptr<NXCFunc> f = get_functional(modeldir);
+    p->func = f;
+}
+
 void nxc_lda_exc_vxc(nxc_func_type* p, int np, double rho[], double exc[], double vrho[]){
   p->func->exc_vxc(np, rho, exc, vrho);
 }

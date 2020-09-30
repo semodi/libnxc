@@ -190,11 +190,8 @@ void AtomicFunc::exc_vxc(int np, double rho[], double exc[], double vrho[]){
   }
   if (edens){
     double grid_factor  = (double(np))/double(*(torch::prod(tgrid).data_ptr<long>()));
-    // std::cout << "Grid factor " << grid_factor << std::endl;
     torch::Tensor qtot = torch::sum(trho)*V_cell;
-    // std::cout << "Charge int " << qtot << std::endl;
     torch::Tensor t_exc =E/qtot*torch::ones_like(trho)*grid_factor;
-    // std::cout << "Double check " << torch::sum(trho*t_exc)*V_cell << std::endl;
     double *E_data = t_exc.data_ptr<double>();
     for(int i=0; i < np; ++i){
       exc[i] += E_data[i];
