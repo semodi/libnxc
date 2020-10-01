@@ -1,5 +1,5 @@
 #include "gtest/gtest.h"
-#include "load_model.cpp"
+#include "atomicfunc.cpp"
 
 namespace{
 TEST(general, loadmodelnopar){
@@ -7,6 +7,9 @@ TEST(general, loadmodelnopar){
 }
 TEST(general, loadmodel){
   EXPECT_EQ(0, load_model());
+}
+TEST(general, runmodel){
+  EXPECT_EQ(0, run_model());
 }
 }
 GTEST_API_ int main(int argc, char **argv) {
