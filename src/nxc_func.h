@@ -46,7 +46,7 @@ private:
   bool edens;
 
   void build_basis();
-
+  void get_descriptors(torch::Tensor &rho, torch::Tensor* descr);
 };
 
 

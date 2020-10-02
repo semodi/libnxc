@@ -13,11 +13,6 @@ std::shared_ptr<AtomicFunc> get_functional(std::string modeldir)
 
 AtomicFunc::AtomicFunc(std::string modeldir){
 
-// #ifdef MPI
-//     if (MPI_RANK==0)
-// #endif
-//       std::cout << "Loading NeuralXC model from " << modeldir <<  std::endl;
-
     std::string xc_str = "xc_";
     std::vector<std::string> model_symbols;
     int ns = 0;
@@ -28,14 +23,8 @@ AtomicFunc::AtomicFunc(std::string modeldir){
           model_symbols.push_back(file.substr(file.find(xc_str) + xc_str.size()));
         }
         else if(file.find("NO_SC") != std::string::npos){
-#ifdef MPI
-    // if (MPI_RANK==0) std::cout << "Warning: Not using NeuralXC self-consistently" << std::endl;
-#endif
           self_consistent=false;
         }else if(file.find("AGN") != std::string::npos){
-#ifdef MPI
-    // if (MPI_RANK==0) std::cout << "Model is species agnostic" << std::endl;
-#endif
           agnostic=true;
         }
     }
@@ -100,107 +89,110 @@ void AtomicFunc::init(func_param fp){
   this->build_basis();
 }
 
-void AtomicFunc::exc_vxc(int np, double rho[], double exc[], double vrho[]){
-  // if (self_consistent || last_step){
+void AtomicFunc::get_descriptors(torch::Tensor &rho, torch::Tensor *descr){
 
-  int ns = symbols.size();
-  int nua = tpos.size(0);
-  std::vector<bool> on_rank;
-  on_rank.resize(nua);
-  torch::Tensor trho= torch::from_blob(rho, np, options_dp.requires_grad(true));
-  torch::Tensor trho_view = trho.view({box_dim[2], box_dim[1], box_dim[0]}).transpose(0,2);
-  torch::Tensor E = torch::zeros({1}, options_dp);
+    int ns = symbols.size();
+    int nua = tpos.size(0);
+    std::vector<bool> on_rank;
+    on_rank.resize(nua);
 
-  at::Tensor this_pos, rad, ang, box, e, descr[nua], descr_glob[nua];
-  torch::Tensor scaler = torch::eye({3}) + epsilon;
-  any_onrank=false;
-  // Get descriptors
-  for(int is = 0; is < ns; ++is){
-    for(int ia = 0; ia < nua; ++ia){
-      int struct_idx = isa_glob[ia] - 1;
-      if(is != struct_idx) continue;
-      this_pos = tpos.select(0,ia);
-      rad = all_rads[ia];
-      ang = all_angs[ia];
-      box = all_boxes[ia];
-      if (rad.size(-1) == 0)
-      {
-        descr[ia] = torch::zeros({0}, options_dp);
-        on_rank[ia] = false;
-      }
-      else
-      {
-        descr[ia] = all_mods[symbols[struct_idx]].projector.forward({trho_view, torch::mv(scaler,this_pos), torch::mm(tcell,scaler),
-            tgrid_d,  rad, ang, box}).toTensor();
-        on_rank[ia] = true;
-        any_onrank = true;
-      }
-    }
-  }
-
-#ifdef MPI
-  // Reduce descriptors over ranks
-  for(int ia = 0; ia < nua; ++ia){
-      int dsize = descr[ia].size(0);
-      int dsize_max;
-      int one=1;
-      mpi_allreduce_(&dsize, &dsize_max,&one,&MPI_INTEGER,&MPI_MAX, &MPI_COMM_WORLD, &mpierror);
-      if (dsize == 0) descr[ia] = torch::zeros({dsize_max},options_dp);
-
-      std::vector<double> descr_glob_ia;
-      descr_glob_ia.resize(dsize_max);
-
-      // double descr_glob_ia;
-      double *descr_data = descr[ia].data_ptr<double>();
-      mpi_allreduce_(descr_data, descr_glob_ia.data(),
-        &dsize_max, &MPI_DOUBLE, &MPI_SUM, &MPI_COMM_WORLD, &mpierror);
-      for(int u =0; u < dsize_max; ++u){
-        descr_glob_ia[u] -= descr_data[u];
-      }
-      torch::Tensor t_descr_glob = torch::from_blob(descr_glob_ia.data(),dsize_max,
-       options_dp);
-      descr[ia] += t_descr_glob;
-  }
-#endif
-
-  // Get energy
-  for(int is = 0; is < ns; ++is){
-    for(int ia = 0; ia < nua; ++ia)
-    {
-      // if (on_rank[ia]){
+    torch::Tensor this_pos, rad, ang, box, descr_glob[nua];
+    torch::Tensor scaler = torch::eye({3}) + epsilon;
+    any_onrank=false;
+    // Get descriptors
+    for(int is = 0; is < ns; ++is){
+      for(int ia = 0; ia < nua; ++ia){
         int struct_idx = isa_glob[ia] - 1;
         if(is != struct_idx) continue;
-        if (descr[ia].size(0) == 0) continue;
-        e = all_mods[symbols[struct_idx]].energy.forward({descr[ia].unsqueeze(0)}).toTensor();
-        E += e;
-    }
-  }
-  E = E/HARTREE;
-  // std::cout << "Energy (Rydberg) " << E << std::endl;
-  if (any_onrank){
-    if (self_consistent){
-      E.backward();
-
-      torch::Tensor Vnxc = trho.grad()/V_cell;
-      double *grad =  Vnxc.data_ptr<double>();
-      for(int i = 0; i < np; ++i){
-        vrho[i] += grad[i];
+        this_pos = tpos.select(0,ia);
+        rad = all_rads[ia];
+        ang = all_angs[ia];
+        box = all_boxes[ia];
+        if (rad.size(-1) == 0)
+        {
+          descr[ia] = torch::zeros({0}, options_dp);
+          on_rank[ia] = false;
+        }
+        else
+        {
+          descr[ia] = all_mods[symbols[struct_idx]].projector.forward({rho, torch::mv(scaler,this_pos), torch::mm(tcell,scaler),
+              tgrid_d,  rad, ang, box}).toTensor();
+          on_rank[ia] = true;
+          any_onrank = true;
+        }
       }
     }
-  }
-  if (edens){
-    double grid_factor  = (double(np))/double(*(torch::prod(tgrid).data_ptr<long>()));
-    torch::Tensor qtot = torch::sum(trho)*V_cell;
-    torch::Tensor t_exc =E/qtot*torch::ones_like(trho)*grid_factor;
-    double *E_data = t_exc.data_ptr<double>();
-    for(int i=0; i < np; ++i){
-      exc[i] += E_data[i];
+
+  #ifdef MPI
+    // Reduce descriptors over ranks
+    for(int ia = 0; ia < nua; ++ia){
+        int dsize = descr[ia].size(0);
+        int dsize_max;
+        int one=1;
+        mpi_allreduce_(&dsize, &dsize_max,&one,&MPI_INTEGER,&MPI_MAX, &MPI_COMM_WORLD, &mpierror);
+        if (dsize == 0) descr[ia] = torch::zeros({dsize_max},options_dp);
+
+        std::vector<double> descr_glob_ia;
+        descr_glob_ia.resize(dsize_max);
+
+        // double descr_glob_ia;
+        double *descr_data = descr[ia].data_ptr<double>();
+        mpi_allreduce_(descr_data, descr_glob_ia.data(),
+          &dsize_max, &MPI_DOUBLE, &MPI_SUM, &MPI_COMM_WORLD, &mpierror);
+        for(int u =0; u < dsize_max; ++u){
+          descr_glob_ia[u] -= descr_data[u];
+        }
+        torch::Tensor t_descr_glob = torch::from_blob(descr_glob_ia.data(),dsize_max,
+         options_dp);
+        descr[ia] += t_descr_glob;
     }
-  }else{
-    double *E_data = E.data_ptr<double>();
-    exc[0] += E_data[0];
+  #endif
+
+}
+void AtomicFunc::exc_vxc(int np, double rho[], double exc[], double vrho[]){
+  if (self_consistent || last_step){
+    int ns = symbols.size();
+    int nua = tpos.size(0);
+    torch::Tensor trho= torch::from_blob(rho, np, options_dp.requires_grad(true));
+    torch::Tensor trho_view = trho.view({box_dim[2], box_dim[1], box_dim[0]}).transpose(0,2);
+    torch::Tensor E = torch::zeros({1}, options_dp);
+    torch::Tensor descr[nua], e;
+
+    this->get_descriptors(trho_view, descr);
+    // Get energy
+    for(int is = 0; is < ns; ++is){
+      for(int ia = 0; ia < nua; ++ia)
+      {
+          int struct_idx = isa_glob[ia] - 1;
+          if(is != struct_idx) continue;
+          if (descr[ia].size(0) == 0) continue;
+          e = all_mods[symbols[struct_idx]].energy.forward({descr[ia].unsqueeze(0)}).toTensor();
+          E += e;
+      }
+    }
+    E = E/HARTREE;
+    if (any_onrank && self_consistent){
+        E.backward();
+
+        torch::Tensor Vnxc = trho.grad()/V_cell;
+        double *grad =  Vnxc.data_ptr<double>();
+        for(int i = 0; i < np; ++i){
+          vrho[i] += grad[i];
+        }
+    }
+    if (edens){
+      double grid_factor  = (double(np))/double(*(torch::prod(tgrid).data_ptr<long>()));
+      torch::Tensor qtot = torch::sum(trho)*V_cell;
+      torch::Tensor t_exc =E/qtot*torch::ones_like(trho)*grid_factor;
+      double *E_data = t_exc.data_ptr<double>();
+      for(int i=0; i < np; ++i){
+        exc[i] += E_data[i];
+      }
+    }else{
+      double *E_data = E.data_ptr<double>();
+      exc[0] += E_data[0];
+    }
   }
-  // }
 }
 
 
