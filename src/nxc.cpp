@@ -5,14 +5,14 @@
 #include <memory>
 
 
-void nxc_func_init(nxc_func_type* p, std::string modeldir, func_param fp){
-    std::shared_ptr<NXCFunc> f = get_functional(modeldir);
-    f->init(fp);
+void nxc_func_init(nxc_func_type* p, std::string model, func_param fp, int nspin){
+    std::shared_ptr<NXCFunc> f = get_functional(model);
+    f->init(fp, nspin);
     p->func = f;
 }
 
-void nxc_func_init(nxc_func_type* p, std::string modeldir){
-    std::shared_ptr<NXCFunc> f = get_functional(modeldir);
+void nxc_func_init(nxc_func_type* p, std::string model, int nspin){
+    std::shared_ptr<NXCFunc> f = get_functional(model);
     p->func = f;
 }
 

@@ -25,9 +25,6 @@
       nxc_path='test.jit'
       call nxc_f90_func_init(xua ,nua, ucell, grid, isua, nxc_symbols, &
         1, ierr, nxc_path, LEN_TRIM(nxc_path), myBox, edens)
-      nxc_path='test_agn.jit'
-      call nxc_f90_func_init(xua ,nua, ucell, grid, isua, nxc_symbols, &
-        1, ierr, nxc_path, LEN_TRIM(nxc_path), myBox, edens)
 
       write(*,*) achar(27),'[92m',"OK!", &
          achar(27),'[0m'

@@ -1,11 +1,6 @@
 .SUFFIXES: .o .F90 .f90 .F .f .a 
 
-ifneq ($(MPI),)
-CPPFLAGS=$(MPIFLAG)
-default: libnxc_mpi.so
-else
-default: libnxc_serial.so
-endif
+default: test
 
 ARCH_MAKE_DEFAULT=../arch.make
 ARCH_MAKE?=$(ARCH_MAKE_DEFAULT)

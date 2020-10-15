@@ -1,14 +1,10 @@
-#include "nxc.h"
 #include "nxc_func.h"
+#include "nxc.h"
 #include <torch/script.h> // One-stop header.
 #include <filesystem>
 #include "nxc_mpi.h"
 // #include "nxc_mpi.h"
 
-std::shared_ptr<AtomicFunc> get_functional(std::string modeldir)
-{
-  return std::make_shared<AtomicFunc>(modeldir);
-}
 
 
 AtomicFunc::AtomicFunc(std::string modeldir){
@@ -50,7 +46,7 @@ AtomicFunc::AtomicFunc(std::string modeldir){
     }
 }
 
-void AtomicFunc::init(func_param fp){
+void AtomicFunc::init(func_param fp, int nspin){
 
   edens = fp.edens;
   int npos = (fp.nua) * 3;
