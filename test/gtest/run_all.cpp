@@ -29,23 +29,23 @@ TEST(grid, loadhmmodels){
     load_hm_models();
 }
 TEST(grid, testhmlda){
-    double vrho_up[100];
-    double exc_up[100];
-    double vrho_p[200];
-    double exc_p[100];
+    double vrho_up[70];
+    double exc_up[70];
+    double vrho_p[140];
+    double exc_p[140];
     test_hm_lda(vrho_up, exc_up, vrho_p, exc_p);
 
     // Compare spin-polarized to unpolarized results and check
     // for consistency
-    for( int i=0;i<100; ++i){
+    for( int i=0;i<70; ++i){
       ASSERT_LT(abs(exc_up[i]-exc_p[i]),TOL);
     }
 
-    for( int i=0;i<100; ++i){
+    for( int i=0;i<70; ++i){
       ASSERT_LT(abs(vrho_up[i]-vrho_p[i]),TOL);
     }
-    for( int i=0;i<100; ++i){
-      ASSERT_LT(abs(vrho_up[i]-vrho_p[i+100]),TOL);
+    for( int i=0;i<70; ++i){
+      ASSERT_LT(abs(vrho_up[i]-vrho_p[i+70]),TOL);
     }
 }
 

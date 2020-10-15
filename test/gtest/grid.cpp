@@ -15,21 +15,24 @@ void test_hm_lda(double vrho_up[],double exc_up[], double vrho_p[], double exc_p
     fp.add = 0;
     int nspin = NXC_UNPOLARIZED;
     nxc_func_init(&p,"HM_LDA", fp, nspin);
-    const int np = 100;
-    double rho_up[100];
+    const int np = 70;
+    double rho_up[70];
     for( int i =0; i< np; ++i){
       rho_up[i] = double(i+10)/100.0;
     }
+    rho_up[0] = 0;
     nxc_lda_exc_vxc(&p, np, rho_up, exc_up, vrho_up);
 
     nspin = NXC_POLARIZED;
     nxc_func_init(&p,"HM_LDA", fp, nspin);
-    double rho_p[200];
+    double rho_p[140];
     for( int is=0; is<2; ++is){
       for( int i =0; i< np; ++i){
         rho_p[is*np+i] = double(i+10)/200.0;
       }
     }
+    rho_p[0] = 0;
+    rho_p[70] = 0;
     nxc_lda_exc_vxc(&p, np, rho_p, exc_p, vrho_p);
 }
 

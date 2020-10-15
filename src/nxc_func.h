@@ -35,11 +35,23 @@ class GridFunc : public NXCFunc{
   public:
     GridFunc(std::string modelname);
     void init(func_param fp, int nspin);
+    void exc_vxc_fs(int np, double rho[], double * exc, double vrho[], double forces[], double stress[]){
+      exc_vxc(np, rho, exc, vrho);
+    }
+    void exc_vxc_fs(int np, double rho[],  double sigma[],
+       double * exc, double vrho[], double vsigma[], double forces[], double stress[]){
+        exc_vxc(np, rho, sigma, exc, vrho, vsigma);
+    }
+    void exc_vxc_fs(int np, double rho[], double sigma[], double lapl[],
+        double tau[], double * exc, double vrho[], double vsigma[], double vlapl[], double vtau[], double forces[], double stress[]){
+          exc_vxc(np, rho, sigma, lapl, tau, exc, vrho, vsigma, vlapl, vtau);
+    }
 
   protected:
     modules model;
     bool edens;
     bool add;
+    torch::Tensor tcell, tgrid, V_cell;
 
 };
 

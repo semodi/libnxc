@@ -1,3 +1,5 @@
+#ifndef MPI_H
+#define MPI_H
 #ifdef MPI
 int MPI_COMM_WORLD;
 int MPI_SIZE;
@@ -22,4 +24,5 @@ void init_nxc_mpi_(int * mpi_comm_world, int * mpi_sum, int * mpi_max, int * mpi
     // std::cout << "Initializing MPI in C for rank " << MPI_RANK << std::endl;
   }
 }
+#endif
 #endif

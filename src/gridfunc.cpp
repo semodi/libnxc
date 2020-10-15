@@ -2,7 +2,6 @@
 #include "nxc_func.h"
 #include <torch/script.h> // One-stop header.
 #include <filesystem>
-#include "nxc_mpi.h"
 // #include "nxc_mpi.h"
 
 
@@ -48,6 +47,15 @@ void GridFunc::init(func_param fp, int nspin){
   this->nspin = nspin;
   add = fp.add;
   edens = fp.edens;
+  if (!edens){
+    tcell = torch::from_blob(fp.cell, 9, options_dp).view({3,3});
+    tgrid = torch::from_blob(fp.grid, 3, options_int);
+    torch::Tensor U = torch::zeros({3,3}, options_dp);
+    for(int i = 0; i< 3; ++i){
+      U.select(1,i) = tcell.select(1,i)/tgrid.select(0,i);
+    }
+    V_cell = torch::abs(torch::det(U));
+  }
 }
 
 void LDAFunc::exc_vxc(int np, double rho[], double * exc, double vrho[]){
@@ -57,6 +65,7 @@ void LDAFunc::exc_vxc(int np, double rho[], double * exc, double vrho[]){
 
     torch::Tensor trho0;
     trho0 = trho.view({nspin, np});
+    trho0 = trho0.index({trho0 > 1e-7});
 
     if (nspin == NXC_UNPOLARIZED){
         trho0 = trho0.expand({2,-1})*0.5;
@@ -76,6 +85,7 @@ void LDAFunc::exc_vxc(int np, double rho[], double * exc, double vrho[]){
       npe = np;
     }else{
       e = Exc.data_ptr<double>();
+      e[0] = e[0]*(V_cell.data_ptr<double>()[0]);
       npe = 1;
     }
     distribute_v(e, exc, 1, npe, 0, 1, add);
