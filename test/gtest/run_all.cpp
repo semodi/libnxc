@@ -72,6 +72,40 @@ TEST(grid, testhmgga){
       ASSERT_LT(abs(vsigma_up[i]-vsigma_p[i+200]),TOL);
     }
 }
+TEST(grid, testhmmetagga){
+    double vrho_up[100];
+    double vsigma_up[100];
+    double vlapl_up[100];
+    double vtau_up[100];
+    double exc_up[100];
+    double vrho_p[200];
+    double vsigma_p[300];
+    double exc_p[100];
+    double vlapl_p[200];
+    double vtau_p[200];
+
+    test_hm_mgga(vrho_up, vsigma_up, vlapl_up,vtau_up, exc_up, vrho_p,
+      vsigma_p, vlapl_p, vtau_p, exc_p);
+
+    // Compare spin-polarized to unpolarized results and check
+    // for consistency
+    for( int i=0;i<100; ++i){
+      ASSERT_LT(abs(exc_up[i]-exc_p[i]),TOL);
+    }
+
+    for( int i=0;i<100; ++i){
+      ASSERT_LT(abs(vrho_up[i]-vrho_p[i]),TOL);
+      ASSERT_LT(abs(vrho_up[i]-vrho_p[i+100]),TOL);
+      ASSERT_LT(abs(vsigma_up[i]-vsigma_p[i]),TOL);
+      ASSERT_LT(abs(vsigma_up[i]-vsigma_p[i+100]*0.5),TOL);
+      ASSERT_LT(abs(vsigma_up[i]-vsigma_p[i+200]),TOL);
+      ASSERT_LT(abs(vtau_up[i]-vtau_p[i]),TOL);
+      ASSERT_LT(abs(vtau_up[i]-vtau_p[i+100]),TOL);
+      ASSERT_LT(abs(vlapl_up[i]),TOL);
+      ASSERT_LT(abs(vlapl_p[i]),TOL);
+      ASSERT_LT(abs(vlapl_p[i+100]),TOL);
+    }
+}
 }
 GTEST_API_ int main(int argc, char **argv) {
   printf("Running main() from gtest_main.cc\n");

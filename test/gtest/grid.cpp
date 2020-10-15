@@ -62,3 +62,45 @@ void test_hm_gga(double vrho_up[], double vsigma_up[], double exc_up[],
     }
     nxc_gga_exc_vxc(&p, np, rho_p, sigma_p, exc_p, vrho_p, vsigma_p);
 }
+
+void test_hm_mgga(double vrho_up[], double vsigma_up[], double vlapl_up[], double vtau_up[], double exc_up[],
+                 double vrho_p[], double vsigma_p[], double vlapl_p[], double vtau_p[], double exc_p[]){
+    nxc_func_type p;
+    func_param fp;
+    int nspin = NXC_UNPOLARIZED;
+    nxc_func_init(&p,"HM_MGGA", fp, nspin);
+    const int np = 100;
+    double rho_up[100];
+    double sigma_up[100];
+    double tau_up[100];
+    double lapl_up[100];
+    for( int i =0; i< np; ++i){
+      rho_up[i] = double(i+10)/100.0;
+      sigma_up[i] = double(i+10)/100.0;
+      tau_up[i] = double((100-i)+10)/100.0;
+      lapl_up[i] = 0.0;
+    }
+    nxc_mgga_exc_vxc(&p, np, rho_up, sigma_up,lapl_up,tau_up,
+       exc_up, vrho_up, vsigma_up, vlapl_up, vtau_up);
+
+    nspin = NXC_POLARIZED;
+    nxc_func_init(&p,"HM_MGGA", fp, nspin);
+    double rho_p[200];
+    double sigma_p[300];
+    double tau_p[200];
+    double lapl_p[200];
+    for( int is=0; is<2; ++is){
+      for( int i =0; i< np; ++i){
+        rho_p[is*np+i] = rho_up[i]*0.5;
+        tau_p[is*np+i] = tau_up[i]*0.5;
+        lapl_p[is*np+i] = 0.0;
+      }
+    }
+    for( int is=0; is<3; ++is){
+      for( int i =0; i< np; ++i){
+        sigma_p[is*np+i] = sigma_up[i]*0.25;
+      }
+    }
+    nxc_mgga_exc_vxc(&p, np, rho_p, sigma_p, lapl_p, tau_p,
+       exc_p, vrho_p, vsigma_p, vlapl_p, vtau_p);
+}
