@@ -25,6 +25,9 @@ public:
   virtual void init(){};
   virtual void init(func_param fp, int nspin){};
   virtual void exc_vxc(int np, double rho[], double * exc, double vrho[]){};
+  virtual void exc_vxc(int np, double rho[], double sigma[], double * exc, double vrho[], double vsigma[]){};
+  virtual void exc_vxc(int np, double rho[], double sigma[], double lapl[], double tau[],
+     double * exc, double vrho[], double vsigma[], double vlapl[], double vtau[]){};
   virtual void exc_vxc_fs(int np, double rho[], double * exc, double vrho[],
                         double forces[], double stress[]){};
 protected:
@@ -43,7 +46,8 @@ void nxc_lda_exc_vxc(nxc_func_type* p, int np, double rho[], double * exc, doubl
 void nxc_lda_exc_vxc_fs(nxc_func_type* p, int np, double rho[], double * exc, double vrho[],
                         double forces[], double stress[]);
 
-void nxc_gga_exc_vxc(nxc_func_type* p, int np, double rho[], double sigma[], double * exc, double vrho[]);
-void nxc_mgga_exc_vxc(nxc_func_type* p, int np, double rho[],double sigma[], double lapl[], double tau[], double * exc, double vrho[]);
+void nxc_gga_exc_vxc(nxc_func_type* p, int np, double rho[], double sigma[], double * exc, double vrho[], double vsigma[]);
+void nxc_mgga_exc_vxc(nxc_func_type* p, int np, double rho[],double sigma[], double lapl[],
+    double tau[], double * exc, double vrho[], double vsigma[], double vlapl[],double vtau[]);
 
 #endif

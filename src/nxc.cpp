@@ -25,3 +25,11 @@ void nxc_lda_exc_vxc_fs(nxc_func_type* p, int np, double rho[], double exc[], do
 
     p->func->exc_vxc_fs(np, rho, exc, vrho, forces, stress) ;
   }
+
+void nxc_gga_exc_vxc(nxc_func_type* p, int np, double rho[], double sigma[], double * exc, double vrho[], double vsigma[]){
+  p->func->exc_vxc(np, rho, sigma, exc, vrho, vsigma);
+}
+void nxc_mgga_exc_vxc(nxc_func_type* p, int np, double rho[],double sigma[], double lapl[],
+    double tau[], double * exc, double vrho[], double vsigma[], double vlapl[],double vtau[]){
+  p->func->exc_vxc(np, rho, sigma,lapl,tau, exc, vrho, vsigma, vlapl, vtau);
+}
