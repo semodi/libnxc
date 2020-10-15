@@ -15,7 +15,8 @@ struct func_param{
   char * symbols; //distinct symbols
   int ns; // symbols.size()
   int * myBox; // box in simulation cell (used mainly for MPI decomposition)
-  int edens;
+  int edens = 1;
+  int add = 1;
 };
 
 class NXCFunc {

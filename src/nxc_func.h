@@ -38,6 +38,8 @@ class GridFunc : public NXCFunc{
 
   protected:
     modules model;
+    bool edens;
+    bool add;
 
 };
 
@@ -94,6 +96,7 @@ class AtomicFunc : public NXCFunc {
     int * grid_glob;
     int box_dim[3];
     bool edens;
+    bool add;
 
     void build_basis();
     void get_descriptors(torch::Tensor &rho, torch::Tensor* descr);

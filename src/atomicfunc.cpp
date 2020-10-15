@@ -49,6 +49,7 @@ AtomicFunc::AtomicFunc(std::string modeldir){
 void AtomicFunc::init(func_param fp, int nspin){
 
   edens = fp.edens;
+  add = fp.add;
   int npos = (fp.nua) * 3;
   tpos_flat = torch::from_blob(fp.pos, npos, options_dp).clone();
   tpos_flat += 1e-7;
@@ -147,6 +148,12 @@ void AtomicFunc::get_descriptors(torch::Tensor &rho, torch::Tensor *descr){
 }
 void AtomicFunc::exc_vxc(int np, double rho[], double exc[], double vrho[]){
   if (self_consistent || last_step){
+    if (!add){ //TODO: There is probably a faster way to do this
+        for(int i = 0; i < np; ++i){
+          vrho[i] = 0;
+          exc[i] = 0;
+        }
+    }
     int ns = symbols.size();
     int nua = tpos.size(0);
     torch::Tensor trho= torch::from_blob(rho, np, options_dp.requires_grad(true));

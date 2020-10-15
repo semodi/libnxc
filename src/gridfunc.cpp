@@ -7,14 +7,21 @@
 
 
 inline void distribute_v(double * v_src, double * v_tar,
-   int nouter, int ninner, int offset, double mult){
+   int nouter, int ninner, int offset, double mult, bool add){
 
+   if(add){
+    for (int is=0; is < nouter; ++is){
+      for (int ip=0; ip < ninner; ++ip){
+        v_tar[is*ninner+ip] += v_src[(is+offset)*ninner+ip]*mult;
+      }
+    }
+   }else{
     for (int is=0; is < nouter; ++is){
       for (int ip=0; ip < ninner; ++ip){
         v_tar[is*ninner+ip] = v_src[(is+offset)*ninner+ip]*mult;
       }
     }
-
+   }
 }
 GridFunc::GridFunc(std::string modelname){
 
@@ -39,6 +46,8 @@ GridFunc::GridFunc(std::string modelname){
 
 void GridFunc::init(func_param fp, int nspin){
   this->nspin = nspin;
+  add = fp.add;
+  edens = fp.edens;
 }
 
 void LDAFunc::exc_vxc(int np, double rho[], double * exc, double vrho[]){
@@ -59,9 +68,17 @@ void LDAFunc::exc_vxc(int np, double rho[], double * exc, double vrho[]){
     Exc.backward();
 
     double *vr = trho.grad().data_ptr<double>();
-    double *e = texc.data_ptr<double>();
-    distribute_v(vr, vrho, nspin, np, 0, 1);
-    distribute_v(e, exc, 1, np, 0, 1);
+    distribute_v(vr, vrho, nspin, np, 0, 1, add);
+    int npe;
+    double *e;
+    if (edens){
+      e = texc.data_ptr<double>();
+      npe = np;
+    }else{
+      e = Exc.data_ptr<double>();
+      npe = 1;
+    }
+    distribute_v(e, exc, 1, npe, 0, 1, add);
 }
 
 void GGAFunc::exc_vxc(int np, double rho[], double sigma[],
@@ -89,10 +106,18 @@ void GGAFunc::exc_vxc(int np, double rho[], double sigma[],
 
     double *vr = trho.grad().data_ptr<double>();
     double *vs = tsigma.grad().data_ptr<double>();
-    double *e = texc.data_ptr<double>();
-    distribute_v(vr, vrho, nspin, np, 0, 1);
-    distribute_v(vs, vsigma, sigmamult, np, 0, 1);
-    distribute_v(e, exc, 1, np, 0, 1);
+    int npe;
+    double *e;
+    if (edens){
+      e = texc.data_ptr<double>();
+      npe = np;
+    }else{
+      e = Exc.data_ptr<double>();
+      npe = 1;
+    }
+    distribute_v(vr, vrho, nspin, np, 0, 1, add);
+    distribute_v(vs, vsigma, sigmamult, np, 0, 1, add);
+    distribute_v(e, exc, 1, npe, 0, 1, add);
 }
 void MGGAFunc::exc_vxc(int np, double rho[], double sigma[], double lapl[],
         double tau[], double * exc, double vrho[], double vsigma[], double vlapl[], double vtau[])
@@ -128,10 +153,18 @@ void MGGAFunc::exc_vxc(int np, double rho[], double sigma[], double lapl[],
     double *vs = tsigma.grad().data_ptr<double>();
     double *vl = tlapl.grad().data_ptr<double>();
     double *vt = ttau.grad().data_ptr<double>();
-    double *e = texc.data_ptr<double>();
-    distribute_v(vr, vrho, nspin, np, 0, 1);
-    distribute_v(vt, vtau, nspin, np, 0, 1);
-    distribute_v(vl, vlapl, nspin, np, 0, 1);
-    distribute_v(vs, vsigma, sigmamult, np, 0, 1);
-    distribute_v(e, exc, 1, np, 0, 1);
+    int npe;
+    double *e;
+    if (edens){
+      e = texc.data_ptr<double>();
+      npe = np;
+    }else{
+      e = Exc.data_ptr<double>();
+      npe = 1;
+    }
+    distribute_v(vr, vrho, nspin, np, 0, 1, add);
+    distribute_v(vt, vtau, nspin, np, 0, 1, add);
+    distribute_v(vl, vlapl, nspin, np, 0, 1, add);
+    distribute_v(vs, vsigma, sigmamult, np, 0, 1, add);
+    distribute_v(e, exc, 1, npe, 0, 1, add);
 }
