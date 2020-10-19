@@ -8,13 +8,14 @@ void load_hm_models(){
     nxc_func_init(&p,"HM_MGGA", fp);
 }
 
-void test_hm_lda(double vrho_up[],double exc_up[], double vrho_p[], double exc_p[]){
+void test_hm_lda(double vrho_up[],double exc_up[], double vrho_p[], double exc_p[], bool cuda){
     nxc_func_type p;
     func_param fp;
     fp.edens = 1;
     fp.add = 0;
     int nspin = NXC_UNPOLARIZED;
     nxc_func_init(&p,"HM_LDA", fp, nspin);
+    if (cuda) p.func->to_cuda();
     const int np = 70;
     double rho_up[70];
     for( int i =0; i< np; ++i){
@@ -37,13 +38,14 @@ void test_hm_lda(double vrho_up[],double exc_up[], double vrho_p[], double exc_p
 }
 
 void test_hm_gga(double vrho_up[], double vsigma_up[], double exc_up[],
-                 double vrho_p[], double vsigma_p[], double exc_p[]){
+                 double vrho_p[], double vsigma_p[], double exc_p[], bool cuda){
     nxc_func_type p;
     func_param fp;
     fp.edens = 1;
     fp.add = 0;
     int nspin = NXC_UNPOLARIZED;
     nxc_func_init(&p,"HM_GGA", fp, nspin);
+    if (cuda) p.func->to_cuda();
     const int np = 100;
     double rho_up[100];
     double sigma_up[100];
@@ -71,13 +73,14 @@ void test_hm_gga(double vrho_up[], double vsigma_up[], double exc_up[],
 }
 
 void test_hm_mgga(double vrho_up[], double vsigma_up[], double vlapl_up[], double vtau_up[], double exc_up[],
-                 double vrho_p[], double vsigma_p[], double vlapl_p[], double vtau_p[], double exc_p[]){
+                 double vrho_p[], double vsigma_p[], double vlapl_p[], double vtau_p[], double exc_p[], bool cuda){
     nxc_func_type p;
     func_param fp;
     fp.edens = 1;
     fp.add = 0;
     int nspin = NXC_UNPOLARIZED;
     nxc_func_init(&p,"HM_MGGA", fp, nspin);
+    if (cuda) p.func->to_cuda();
     const int np = 100;
     double rho_up[100];
     double sigma_up[100];

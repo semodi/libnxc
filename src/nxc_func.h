@@ -2,6 +2,7 @@
 #define NXC_FUNC_H
 #include "nxc.h"
 #include <torch/script.h> // One-stop header.
+// #include "nxc_mpi.h"
 
 const double RY = 13.605693012183622;
 const double HARTREE = 27.211386024367243;
@@ -11,6 +12,9 @@ const auto options_int = torch::TensorOptions().dtype(torch::kInt);
 const int LDA_TYPE=0;
 const int GGA_TYPE=1;
 const int MGGA_TYPE=2;
+
+const int DEVICE_CUDA=1;
+const int DEVICE_CPU=0;
 
 const std::vector<std::string> model_names = {
   "HM_LDA",
@@ -47,11 +51,13 @@ class GridFunc : public NXCFunc{
           exc_vxc(np, rho, sigma, lapl, tau, exc, vrho, vsigma, vlapl, vtau);
     }
 
+    void to_cuda();
   protected:
     modules model;
     bool edens;
     bool add;
     torch::Tensor tcell, tgrid, V_cell;
+    int device;
 
 };
 

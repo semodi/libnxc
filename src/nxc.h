@@ -31,6 +31,7 @@ public:
      double * exc, double vrho[], double vsigma[], double vlapl[], double vtau[]){};
   virtual void exc_vxc_fs(int np, double rho[], double * exc, double vrho[],
                         double forces[], double stress[]){};
+  virtual void to_cuda(){};
 protected:
   int nspin;
 };
@@ -50,5 +51,7 @@ void nxc_lda_exc_vxc_fs(nxc_func_type* p, int np, double rho[], double * exc, do
 void nxc_gga_exc_vxc(nxc_func_type* p, int np, double rho[], double sigma[], double * exc, double vrho[], double vsigma[]);
 void nxc_mgga_exc_vxc(nxc_func_type* p, int np, double rho[],double sigma[], double lapl[],
     double tau[], double * exc, double vrho[], double vsigma[], double vlapl[],double vtau[]);
+
+int cuda_available();
 
 #endif

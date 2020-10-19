@@ -58,24 +58,38 @@ void GridFunc::init(func_param fp, int nspin){
   }
 }
 
+void GridFunc::to_cuda(){
+
+  model.energy.to(at::kCUDA);
+  device = DEVICE_CUDA;
+
+}
 void LDAFunc::exc_vxc(int np, double rho[], double * exc, double vrho[]){
 
     // Assuming row-major order to resolve spin, caution when passing from fortran!
-    torch::Tensor trho = torch::from_blob(rho, np*nspin, options_dp.requires_grad(true));
-
+    torch::Tensor trho;
+    torch::Tensor trho_cud;
+    trho = torch::from_blob(rho, np*nspin, options_dp.requires_grad(true));
+    if (device == DEVICE_CUDA){
+      trho_cud = trho.to(at::kCUDA);
+    }else{
+      trho_cud = trho;
+    }
     torch::Tensor trho0;
-    trho0 = trho.view({nspin, np});
-    trho0 = trho0.index({trho0 > 1e-7});
+    trho0 = trho_cud.view({nspin, np});
 
     if (nspin == NXC_UNPOLARIZED){
         trho0 = trho0.expand({2,-1})*0.5;
     }
 
+    trho0 = trho0.index({"...",torch::sum(trho0,0) > 1e-7});
     torch::Tensor texc, Exc;
     texc = model.energy.forward({trho0.transpose(0,1)}).toTensor().squeeze();
     Exc = torch::dot(texc, torch::sum(trho0, 0));
     Exc.backward();
 
+    texc = texc.to(at::kCPU);
+    Exc = Exc.to(at::kCPU);
     double *vr = trho.grad().data_ptr<double>();
     distribute_v(vr, vrho, nspin, np, 0, 1, add);
     int npe;
@@ -89,19 +103,36 @@ void LDAFunc::exc_vxc(int np, double rho[], double * exc, double vrho[]){
       npe = 1;
     }
     distribute_v(e, exc, 1, npe, 0, 1, add);
+
+    // if (!edens){
+    //   double e_glob = 0;
+    //   int one = 1;
+    //   mpi_allreduce_(exc, &e_glob,
+    //     &one, &MPI_DOUBLE, &MPI_SUM, &MPI_COMM_WORLD, &mpierror);
+    //   exc[0] = e_glob;
+    // }
 }
 
 void GGAFunc::exc_vxc(int np, double rho[], double sigma[],
         double * exc, double vrho[], double vsigma[]){
 
+    torch::Tensor trho_cud, tsigma_cud;
     // Assuming row-major order to resolve spin, caution when passing from fortran!
     torch::Tensor trho = torch::from_blob(rho, np*nspin, options_dp.requires_grad(true));
     int sigmamult = (nspin==NXC_UNPOLARIZED) ? 1 : 3; // Three spin channels for sigma if polarized
     torch::Tensor tsigma = torch::from_blob(sigma, np*sigmamult, options_dp.requires_grad(true));
 
+    if (device == DEVICE_CUDA){
+      trho_cud = trho.to(at::kCUDA);
+      tsigma_cud = tsigma.to(at::kCUDA);
+    }else{
+      trho_cud = trho;
+      tsigma_cud = tsigma;
+    }
+
     torch::Tensor rho_inp,sigma_inp;
-    rho_inp = trho.view({nspin, np});
-    sigma_inp = tsigma.view({sigmamult, np});
+    rho_inp = trho_cud.view({nspin, np});
+    sigma_inp = tsigma_cud.view({sigmamult, np});
 
     if (nspin == NXC_UNPOLARIZED){
         rho_inp = rho_inp.expand({2,-1})*0.5;
@@ -114,6 +145,8 @@ void GGAFunc::exc_vxc(int np, double rho[], double sigma[],
     Exc = torch::dot(texc, torch::sum(rho_inp, 0));
     Exc.backward();
 
+    texc = texc.to(at::kCPU);
+    Exc = Exc.to(at::kCPU);
     double *vr = trho.grad().data_ptr<double>();
     double *vs = tsigma.grad().data_ptr<double>();
     int npe;
@@ -133,6 +166,7 @@ void MGGAFunc::exc_vxc(int np, double rho[], double sigma[], double lapl[],
         double tau[], double * exc, double vrho[], double vsigma[], double vlapl[], double vtau[])
 {
 
+    torch::Tensor trho_cud, tsigma_cud, tlapl_cud, ttau_cud;
     // Assuming row-major order to resolve spin, caution when passing from fortran!
     torch::Tensor trho = torch::from_blob(rho, np*nspin, options_dp.requires_grad(true));
     int sigmamult = (nspin==NXC_UNPOLARIZED) ? 1 : 3; // Three spin channels for sigma if polarized
@@ -140,11 +174,23 @@ void MGGAFunc::exc_vxc(int np, double rho[], double sigma[], double lapl[],
     torch::Tensor tlapl = torch::from_blob(lapl, np*nspin, options_dp.requires_grad(true));
     torch::Tensor ttau = torch::from_blob(tau, np*nspin, options_dp.requires_grad(true));
 
+    if (device == DEVICE_CUDA){
+      trho_cud = trho.to(at::kCUDA);
+      tsigma_cud = tsigma.to(at::kCUDA);
+      tlapl_cud = tlapl.to(at::kCUDA);
+      ttau_cud = ttau.to(at::kCUDA);
+    }else{
+      trho_cud = trho;
+      tsigma_cud = tsigma;
+      tlapl_cud = tlapl;
+      ttau_cud = ttau;
+    }
+
     torch::Tensor rho_inp, sigma_inp, lapl_inp, tau_inp;
-    rho_inp = trho.view({nspin, np});
-    sigma_inp = tsigma.view({sigmamult, np});
-    lapl_inp = tlapl.view({nspin, np});
-    tau_inp = ttau.view({nspin, np});
+    rho_inp = trho_cud.view({nspin, np});
+    sigma_inp = tsigma_cud.view({sigmamult, np});
+    lapl_inp = tlapl_cud.view({nspin, np});
+    tau_inp = ttau_cud.view({nspin, np});
 
     if (nspin == NXC_UNPOLARIZED){
         rho_inp = rho_inp.expand({2,-1})*0.5;
@@ -159,6 +205,8 @@ void MGGAFunc::exc_vxc(int np, double rho[], double sigma[], double lapl[],
     Exc = torch::dot(texc, torch::sum(rho_inp, 0));
     Exc.backward();
 
+    texc = texc.to(at::kCPU);
+    Exc = Exc.to(at::kCPU);
     double *vr = trho.grad().data_ptr<double>();
     double *vs = tsigma.grad().data_ptr<double>();
     double *vl = tlapl.grad().data_ptr<double>();

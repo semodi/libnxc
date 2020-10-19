@@ -1,8 +1,16 @@
 #include "gtest/gtest.h"
 #include "atomic.h"
 #include "grid.h"
+#include "cuda.h"
 const double TOL = 1e-8;
 namespace{
+
+TEST(cuda, cudaavail){
+  EXPECT_EQ(1, test_cuda());
+}
+TEST(cuda, sendmodel){
+  EXPECT_EQ(0, send_model());
+}
 TEST(atomic, loadmodelnopar){
   // Load model without any functional parameters
   EXPECT_EQ(0, load_model_nopar());
@@ -29,23 +37,27 @@ TEST(grid, loadhmmodels){
     load_hm_models();
 }
 TEST(grid, testhmlda){
-    double vrho_up[70];
-    double exc_up[70];
-    double vrho_p[140];
-    double exc_p[140];
-    test_hm_lda(vrho_up, exc_up, vrho_p, exc_p);
+    // TODO: parametrize tests with CUDA option
+    int cuda=0;
+    for (cuda=0;cuda<test_cuda()+1;++cuda){
+      double vrho_up[70];
+      double exc_up[70];
+      double vrho_p[140];
+      double exc_p[140];
+      test_hm_lda(vrho_up, exc_up, vrho_p, exc_p, cuda);
 
-    // Compare spin-polarized to unpolarized results and check
-    // for consistency
-    for( int i=0;i<70; ++i){
-      ASSERT_LT(abs(exc_up[i]-exc_p[i]),TOL);
-    }
+      // Compare spin-polarized to unpolarized results and check
+      // for consistency
+      for( int i=0;i<70; ++i){
+        ASSERT_LT(abs(exc_up[i]-exc_p[i]),TOL);
+      }
 
-    for( int i=0;i<70; ++i){
-      ASSERT_LT(abs(vrho_up[i]-vrho_p[i]),TOL);
-    }
-    for( int i=0;i<70; ++i){
-      ASSERT_LT(abs(vrho_up[i]-vrho_p[i+70]),TOL);
+      for( int i=0;i<70; ++i){
+        ASSERT_LT(abs(vrho_up[i]-vrho_p[i]),TOL);
+      }
+      for( int i=0;i<70; ++i){
+        ASSERT_LT(abs(vrho_up[i]-vrho_p[i+70]),TOL);
+      }
     }
 }
 
@@ -56,20 +68,23 @@ TEST(grid, testhmgga){
     double vrho_p[200];
     double vsigma_p[300];
     double exc_p[100];
-    test_hm_gga(vrho_up, vsigma_up, exc_up, vrho_p, vsigma_p, exc_p);
+    int cuda=0;
+    for (cuda=0;cuda<test_cuda()+1;++cuda){
+      test_hm_gga(vrho_up, vsigma_up, exc_up, vrho_p, vsigma_p, exc_p, cuda);
 
-    // Compare spin-polarized to unpolarized results and check
-    // for consistency
-    for( int i=0;i<100; ++i){
-      ASSERT_LT(abs(exc_up[i]-exc_p[i]),TOL);
-    }
+      // Compare spin-polarized to unpolarized results and check
+      // for consistency
+      for( int i=0;i<100; ++i){
+        ASSERT_LT(abs(exc_up[i]-exc_p[i]),TOL);
+      }
 
-    for( int i=0;i<100; ++i){
-      ASSERT_LT(abs(vrho_up[i]-vrho_p[i]),TOL);
-      ASSERT_LT(abs(vrho_up[i]-vrho_p[i+100]),TOL);
-      ASSERT_LT(abs(vsigma_up[i]-vsigma_p[i]),TOL);
-      ASSERT_LT(abs(vsigma_up[i]-vsigma_p[i+100]*0.5),TOL);
-      ASSERT_LT(abs(vsigma_up[i]-vsigma_p[i+200]),TOL);
+      for( int i=0;i<100; ++i){
+        ASSERT_LT(abs(vrho_up[i]-vrho_p[i]),TOL);
+        ASSERT_LT(abs(vrho_up[i]-vrho_p[i+100]),TOL);
+        ASSERT_LT(abs(vsigma_up[i]-vsigma_p[i]),TOL);
+        ASSERT_LT(abs(vsigma_up[i]-vsigma_p[i+100]*0.5),TOL);
+        ASSERT_LT(abs(vsigma_up[i]-vsigma_p[i+200]),TOL);
+      }
     }
 }
 TEST(grid, testhmmetagga){
@@ -84,26 +99,29 @@ TEST(grid, testhmmetagga){
     double vlapl_p[200];
     double vtau_p[200];
 
-    test_hm_mgga(vrho_up, vsigma_up, vlapl_up,vtau_up, exc_up, vrho_p,
-      vsigma_p, vlapl_p, vtau_p, exc_p);
+    int cuda=0;
+    for (cuda=0;cuda<test_cuda()+1;++cuda){
+      test_hm_mgga(vrho_up, vsigma_up, vlapl_up,vtau_up, exc_up, vrho_p,
+        vsigma_p, vlapl_p, vtau_p, exc_p, cuda);
 
-    // Compare spin-polarized to unpolarized results and check
-    // for consistency
-    for( int i=0;i<100; ++i){
-      ASSERT_LT(abs(exc_up[i]-exc_p[i]),TOL);
-    }
+      // Compare spin-polarized to unpolarized results and check
+      // for consistency
+      for( int i=0;i<100; ++i){
+        ASSERT_LT(abs(exc_up[i]-exc_p[i]),TOL);
+      }
 
-    for( int i=0;i<100; ++i){
-      ASSERT_LT(abs(vrho_up[i]-vrho_p[i]),TOL);
-      ASSERT_LT(abs(vrho_up[i]-vrho_p[i+100]),TOL);
-      ASSERT_LT(abs(vsigma_up[i]-vsigma_p[i]),TOL);
-      ASSERT_LT(abs(vsigma_up[i]-vsigma_p[i+100]*0.5),TOL);
-      ASSERT_LT(abs(vsigma_up[i]-vsigma_p[i+200]),TOL);
-      ASSERT_LT(abs(vtau_up[i]-vtau_p[i]),TOL);
-      ASSERT_LT(abs(vtau_up[i]-vtau_p[i+100]),TOL);
-      ASSERT_LT(abs(vlapl_up[i]),TOL);
-      ASSERT_LT(abs(vlapl_p[i]),TOL);
-      ASSERT_LT(abs(vlapl_p[i+100]),TOL);
+      for( int i=0;i<100; ++i){
+        ASSERT_LT(abs(vrho_up[i]-vrho_p[i]),TOL);
+        ASSERT_LT(abs(vrho_up[i]-vrho_p[i+100]),TOL);
+        ASSERT_LT(abs(vsigma_up[i]-vsigma_p[i]),TOL);
+        ASSERT_LT(abs(vsigma_up[i]-vsigma_p[i+100]*0.5),TOL);
+        ASSERT_LT(abs(vsigma_up[i]-vsigma_p[i+200]),TOL);
+        ASSERT_LT(abs(vtau_up[i]-vtau_p[i]),TOL);
+        ASSERT_LT(abs(vtau_up[i]-vtau_p[i+100]),TOL);
+        ASSERT_LT(abs(vlapl_up[i]),TOL);
+        ASSERT_LT(abs(vlapl_p[i]),TOL);
+        ASSERT_LT(abs(vlapl_p[i+100]),TOL);
+      }
     }
 }
 }

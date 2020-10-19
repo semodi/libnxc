@@ -1,4 +1,5 @@
-#include <torch/script.h> // One-stop header.
+// #include <torch/script.h> // One-stop header.
+#include <torch/torch.h> // One-stop header.
 #include "nxc.h"
 #include "nxc_func.h"
 #include <iostream>
@@ -32,4 +33,8 @@ void nxc_gga_exc_vxc(nxc_func_type* p, int np, double rho[], double sigma[], dou
 void nxc_mgga_exc_vxc(nxc_func_type* p, int np, double rho[],double sigma[], double lapl[],
     double tau[], double * exc, double vrho[], double vsigma[], double vlapl[],double vtau[]){
   p->func->exc_vxc(np, rho, sigma,lapl,tau, exc, vrho, vsigma, vlapl, vtau);
+}
+
+int cuda_available(){
+  return torch::cuda::cudnn_is_available();
 }
