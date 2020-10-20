@@ -56,12 +56,14 @@ void GridFunc::init(func_param fp, int nspin){
     }
     V_cell = torch::abs(torch::det(U));
   }
+  if (fp.cuda) this->to_cuda();
 }
 
 void GridFunc::to_cuda(){
 
   model.energy.to(at::kCUDA);
   device = DEVICE_CUDA;
+  std::cout << "libnxc:Using CUDA" << std::endl;
 
 }
 void LDAFunc::exc_vxc(int np, double rho[], double * exc, double vrho[]){
@@ -87,7 +89,6 @@ void LDAFunc::exc_vxc(int np, double rho[], double * exc, double vrho[]){
     texc = model.energy.forward({trho0.transpose(0,1)}).toTensor().squeeze();
     Exc = torch::dot(texc, torch::sum(trho0, 0));
     Exc.backward();
-
     texc = texc.to(at::kCPU);
     Exc = Exc.to(at::kCPU);
     double *vr = trho.grad().data_ptr<double>();

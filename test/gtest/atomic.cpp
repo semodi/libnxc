@@ -24,7 +24,7 @@ int load_model(){
     return 0;
 }
 
-double run_model(int *myBox){
+double run_model(int *myBox, bool cuda){
     nxc_func_type p;
 
     double pos[3] = {0., 0., 0.};
@@ -36,8 +36,13 @@ double run_model(int *myBox){
     int ns = 1;
     int edens = 0;
 
-    func_param fp = {pos, nua, cell, grid, isa, symbols, ns, myBox, edens};
-    nxc_func_init(&p, "../test.jit", fp);
+    if (cuda){
+      func_param fp = {pos, nua, cell, grid, isa, symbols, ns, myBox, edens, 1, 1};
+      nxc_func_init(&p, "../test.cuda.jit", fp);
+    }else{
+      func_param fp = {pos, nua, cell, grid, isa, symbols, ns, myBox, edens, 1, 0};
+      nxc_func_init(&p, "../test.jit", fp);
+    }
 
     int np = 1;
     for (int i =0; i<3; i++){

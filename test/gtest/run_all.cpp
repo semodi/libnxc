@@ -2,7 +2,7 @@
 #include "atomic.h"
 #include "grid.h"
 #include "cuda.h"
-const double TOL = 1e-8;
+const double TOL = 1e-6;
 namespace{
 
 TEST(cuda, cudaavail){
@@ -22,15 +22,19 @@ TEST(atomic, loadmodel){
 TEST(atomic, runmodel){
   // Run the test model on synthetic data
   int myBox[6] = {0, 9, 0, 9, 0, 9};
-  EXPECT_LT(abs(0.00328425-run_model(myBox)),TOL);
+  for (int cuda=0;cuda<test_cuda()+1;++cuda){
+    EXPECT_LT(abs(0.0314854-run_model(myBox, cuda)),TOL);
+  }
 }
 TEST(atomic, testbox){
   // Check myBox consistency (important if using MPI)
   int myBox1[6] = {0, 4, 0, 4, 0, 4};
   int myBox2[6] = {5, 9, 5, 9, 5, 9};
   int myBox3[6] = {3, 7, 3, 7, 3, 7};
-  EXPECT_LT(abs(run_model(myBox1)-run_model(myBox2)),TOL);
-  EXPECT_GT(abs(run_model(myBox3)-run_model(myBox2)),TOL);
+  for (int cuda=0;cuda<test_cuda()+1;++cuda){
+    EXPECT_LT(abs(run_model(myBox1, cuda)-run_model(myBox2, cuda)),TOL);
+    EXPECT_GT(abs(run_model(myBox3, cuda)-run_model(myBox2, cuda)),TOL);
+  }
 }
 
 TEST(grid, loadhmmodels){

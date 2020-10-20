@@ -8,11 +8,11 @@ nxc_func_type nxc_func;
 
 int nxc_f90_func_init_(double  pos[], int * nua, double  cell[], int  grid[], int isa[],
             char symbols[], int * ns, int * ierr, char  modelpath[], int * pathlen, int myBox[],
-            int * edens){
+            int * edens, int * add, int * cuda){
 
     std::string modeldir(modelpath);
     modeldir = modeldir.erase(*pathlen, std::string::npos);
-    func_param fp = {pos, *nua, cell, grid, isa, symbols, *ns, myBox, *edens};
+    func_param fp = {pos, *nua, cell, grid, isa, symbols, *ns, myBox, *edens, *add, *cuda};
     nxc_func_init(&nxc_func, modeldir, fp);
 
   return 0;

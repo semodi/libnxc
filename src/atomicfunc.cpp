@@ -46,6 +46,20 @@ AtomicFunc::AtomicFunc(std::string modeldir){
     }
 }
 
+void AtomicFunc::to_cuda(){
+
+  int ns = symbols.size();
+  int nua = tpos.size(0);
+  for(int is = 0; is < ns; ++is){
+    for(int ia = 0; ia < nua; ++ia){
+      int struct_idx = isa_glob[ia] - 1;
+      if(is != struct_idx) continue;
+      all_mods[symbols[struct_idx]].basis.to(at::kCUDA);
+    }
+  }
+  device = DEVICE_CUDA;
+
+}
 void AtomicFunc::init(func_param fp, int nspin){
 
   edens = fp.edens;
@@ -53,6 +67,7 @@ void AtomicFunc::init(func_param fp, int nspin){
   int npos = (fp.nua) * 3;
   tpos_flat = torch::from_blob(fp.pos, npos, options_dp).clone();
   tpos_flat += 1e-7;
+
   tpos = tpos_flat.view({fp.nua,3});
   tcell = torch::from_blob(fp.cell, 9, options_dp).view({3,3});
   tgrid = torch::from_blob(fp.grid, 3, options_int);
@@ -83,6 +98,15 @@ void AtomicFunc::init(func_param fp, int nspin){
     }
     symbols[i/2] = symbol_string;
   }
+  if (fp.cuda){
+    to_cuda();
+    tpos = tpos.to(at::kCUDA);
+    tcell = tcell.to(at::kCUDA);
+    tgrid = tgrid.to(at::kCUDA);
+    tgrid_d = tgrid_d.to(at::kCUDA);
+    my_box = my_box.to(at::kCUDA);
+    epsilon = epsilon.to(at::kCUDA);
+  }
   this->build_basis();
 }
 
@@ -93,8 +117,12 @@ void AtomicFunc::get_descriptors(torch::Tensor &rho, torch::Tensor *descr){
     std::vector<bool> on_rank;
     on_rank.resize(nua);
 
-    torch::Tensor this_pos, rad, ang, box, descr_glob[nua];
-    torch::Tensor scaler = torch::eye({3}) + epsilon;
+    torch::Tensor this_pos, rad, ang, box, descr_glob[nua], scaler;
+    if (device==DEVICE_CUDA){
+      scaler = torch::eye({3}).to(at::kCUDA) + epsilon;
+    }else{
+      scaler = torch::eye({3}) + epsilon;
+    }
     any_onrank=false;
     // Get descriptors
     for(int is = 0; is < ns; ++is){
@@ -120,28 +148,34 @@ void AtomicFunc::get_descriptors(torch::Tensor &rho, torch::Tensor *descr){
       }
     }
 
+  // TODO: The following section has not been tested with CUDA:
   #ifdef MPI
     // Reduce descriptors over ranks
-    for(int ia = 0; ia < nua; ++ia){
-        int dsize = descr[ia].size(0);
-        int dsize_max;
-        int one=1;
-        mpi_allreduce_(&dsize, &dsize_max,&one,&MPI_INTEGER,&MPI_MAX, &MPI_COMM_WORLD, &mpierror);
-        if (dsize == 0) descr[ia] = torch::zeros({dsize_max},options_dp);
+    if(MPI_SIZE>1){
+      for(int ia = 0; ia < nua; ++ia){
+          int dsize = descr[ia].size(0);
+          int dsize_max;
+          int one=1;
+          mpi_allreduce_(&dsize, &dsize_max,&one,&MPI_INTEGER,&MPI_MAX, &MPI_COMM_WORLD, &mpierror);
+          if (dsize == 0) descr[ia] = torch::zeros({dsize_max},options_dp);
 
-        std::vector<double> descr_glob_ia;
-        descr_glob_ia.resize(dsize_max);
+          std::vector<double> descr_glob_ia;
+          descr_glob_ia.resize(dsize_max);
 
-        // double descr_glob_ia;
-        double *descr_data = descr[ia].data_ptr<double>();
-        mpi_allreduce_(descr_data, descr_glob_ia.data(),
-          &dsize_max, &MPI_DOUBLE, &MPI_SUM, &MPI_COMM_WORLD, &mpierror);
-        for(int u =0; u < dsize_max; ++u){
-          descr_glob_ia[u] -= descr_data[u];
-        }
-        torch::Tensor t_descr_glob = torch::from_blob(descr_glob_ia.data(),dsize_max,
-         options_dp);
-        descr[ia] += t_descr_glob;
+          // double descr_glob_ia;
+          descr[ia] = descr[ia].to(at::kCPU);
+          double *descr_data = descr[ia].data_ptr<double>();
+          mpi_allreduce_(descr_data, descr_glob_ia.data(),
+            &dsize_max, &MPI_DOUBLE, &MPI_SUM, &MPI_COMM_WORLD, &mpierror);
+          for(int u =0; u < dsize_max; ++u){
+            descr_glob_ia[u] -= descr_data[u];
+          }
+          torch::Tensor t_descr_glob = torch::from_blob(descr_glob_ia.data(),dsize_max,
+           options_dp);
+          descr[ia] += t_descr_glob;
+          if (device==DEVICE_CUDA)
+            descr[ia] = descr[ia].to(at::kCPU);
+      }
     }
   #endif
 
@@ -160,6 +194,11 @@ void AtomicFunc::exc_vxc(int np, double rho[], double exc[], double vrho[]){
     torch::Tensor trho_view = trho.view({box_dim[2], box_dim[1], box_dim[0]}).transpose(0,2);
     torch::Tensor E = torch::zeros({1}, options_dp);
     torch::Tensor descr[nua], e;
+
+    if (device == DEVICE_CUDA){
+      trho_view = trho_view.to(at::kCUDA);
+      E = E.to(at::kCUDA);
+    }
 
     this->get_descriptors(trho_view, descr);
     // Get energy
@@ -187,11 +226,13 @@ void AtomicFunc::exc_vxc(int np, double rho[], double exc[], double vrho[]){
       double grid_factor  = (double(np))/double(*(torch::prod(tgrid).data_ptr<long>()));
       torch::Tensor qtot = torch::sum(trho)*V_cell;
       torch::Tensor t_exc =E/qtot*torch::ones_like(trho)*grid_factor;
+      t_exc = t_exc.to(at::kCPU);
       double *E_data = t_exc.data_ptr<double>();
       for(int i=0; i < np; ++i){
         exc[i] += E_data[i];
       }
     }else{
+      E = E.to(at::kCPU);
       double *E_data = E.data_ptr<double>();
       exc[0] += E_data[0];
     }
@@ -203,24 +244,33 @@ void AtomicFunc::exc_vxc_fs(int np, double rho[], double exc[], double vrho[],
                         double forces[], double stress[]){
 
   int nua = tpos.size(0);
+  torch::Tensor epsilon_grad;
   if (self_consistent){
     tpos_flat.requires_grad_(true);
-    epsilon.requires_grad_(true);
+    torch::Tensor epsilon_grad = torch::zeros({3,3}, options_dp.requires_grad(true));
+    if(device==DEVICE_CUDA){
+      epsilon = epsilon_grad.to(at::kCUDA);
+    }else{
+      epsilon.requires_grad_(true);
+    }
   }
   tpos = tpos_flat.view({nua,3});
+  if(device==DEVICE_CUDA)
+    tpos = tpos.to(at::kCUDA);
 
   last_step=true;
   build_basis();
   this->exc_vxc(np, rho, exc, vrho);
   last_step=false;
-
+  V_ucell = V_ucell.to(at::kCPU);
   torch::Tensor force_corr, stress_corr;
+  stress_corr = torch::zeros({3, 3}, options_dp);
+  force_corr = torch::zeros({nua*3}, options_dp);
   if (any_onrank && self_consistent){
     force_corr = tpos_flat.grad();
-    stress_corr = epsilon.grad()/V_ucell;
-  }else{
-    force_corr = torch::zeros({nua*3}, options_dp);
-    stress_corr = torch::zeros({3, 3}, options_dp);
+    if (!(device==DEVICE_CUDA)){
+      stress_corr = epsilon.grad()/V_ucell;
+    }
   }
   stress_corr = .5*(stress_corr + stress_corr.transpose(0,1));
 
@@ -257,7 +307,12 @@ void AtomicFunc::build_basis(){
   int nua = tpos.size(0);
   at::Tensor this_pos, rad, ang;
 
-  torch::Tensor scaler = torch::eye({3}) + epsilon;
+  torch::Tensor scaler;
+  if (device==DEVICE_CUDA){
+    scaler = torch::eye({3}).to(at::kCUDA) + epsilon;
+  }else{
+    scaler = torch::eye({3}) + epsilon;
+  }
   for(int is = 0; is < ns; ++is){
     for(int ia = 0; ia < nua; ++ia){
       int struct_idx = isa_glob[ia] - 1;

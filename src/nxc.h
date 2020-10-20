@@ -17,6 +17,7 @@ struct func_param{
   int * myBox; // box in simulation cell (used mainly for MPI decomposition)
   int edens = 1;
   int add = 1;
+  int cuda = 0;
 };
 
 class NXCFunc {
@@ -34,6 +35,7 @@ public:
   virtual void to_cuda(){};
 protected:
   int nspin;
+  int device;
 };
 
 struct nxc_func_type{

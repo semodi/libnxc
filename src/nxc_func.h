@@ -50,14 +50,13 @@ class GridFunc : public NXCFunc{
         double tau[], double * exc, double vrho[], double vsigma[], double vlapl[], double vtau[], double forces[], double stress[]){
           exc_vxc(np, rho, sigma, lapl, tau, exc, vrho, vsigma, vlapl, vtau);
     }
-
     void to_cuda();
+
   protected:
     modules model;
     bool edens;
     bool add;
     torch::Tensor tcell, tgrid, V_cell;
-    int device;
 
 };
 
@@ -93,7 +92,7 @@ class AtomicFunc : public NXCFunc {
     void exc_vxc(int np, double rho[], double * exc, double vrho[]);
     void exc_vxc_fs(int np, double rho[], double * exc, double vrho[],
                           double forces[], double stress[]);
-
+    void to_cuda();
 
 
   private:
