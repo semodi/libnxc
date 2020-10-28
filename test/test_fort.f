@@ -24,7 +24,7 @@
       ! Initialize grid, basis, etc.
       nxc_path='test.jit'
       call nxc_f90_func_init(xua ,nua, ucell, grid, isua, nxc_symbols, &
-        1, ierr, nxc_path, LEN_TRIM(nxc_path), myBox, edens)
+        1, ierr, nxc_path, LEN_TRIM(nxc_path), myBox, edens,1,0)
 
       write(*,*) achar(27),'[92m',"OK!", &
          achar(27),'[0m'
