@@ -1,13 +1,18 @@
 #include "nxc_f90.h"
 extern "C"{
 
+void nxc_f90_set_code_(int * code){
+  nxc_set_code(*code);
+}
+void nxc_f90_use_cuda_(){
+  nxc_use_cuda();
+}
 int nxc_f90_func_init_(double  pos[], int * nua, double  cell[], int  grid[], int isa[],
-            char symbols[], int * ns, int * ierr, char  modelpath[], int * pathlen, int myBox[],
-            int * edens, int * add, int * cuda){
+            char symbols[], int * ns, int * ierr, char  modelpath[], int * pathlen, int myBox[]){
 
     std::string modeldir(modelpath);
     modeldir = modeldir.erase(*pathlen, std::string::npos);
-    func_param fp = {pos, *nua, cell, grid, isa, symbols, *ns, myBox, *edens, *add, *cuda};
+    func_param fp = {pos, *nua, cell, grid, isa, symbols, *ns, myBox};
     nxc_func_init(&nxc_func, modeldir, fp);
 
   return 0;

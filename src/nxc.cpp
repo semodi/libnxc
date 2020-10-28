@@ -5,7 +5,6 @@
 #include <iostream>
 #include <memory>
 
-
 void nxc_func_init(nxc_func_type* p, std::string model, func_param fp, int nspin){
     std::shared_ptr<NXCFunc> f = get_functional(model);
     f->init(fp, nspin);
@@ -35,6 +34,14 @@ void nxc_mgga_exc_vxc(nxc_func_type* p, int np, double rho[],double sigma[], dou
   p->func->exc_vxc(np, rho, sigma,lapl,tau, exc, vrho, vsigma, vlapl, vtau);
 }
 
-int cuda_available(){
+int nxc_cuda_available(){
   return torch::cuda::cudnn_is_available();
+}
+
+void nxc_set_code(int code){
+  defaults->setDefault(code);
+}
+
+void nxc_use_cuda(){
+  defaults->useCuda();
 }

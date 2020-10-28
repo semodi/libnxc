@@ -2,7 +2,7 @@
 
 int test_cuda(){
 
-  return cuda_available();
+  return nxc_cuda_available();
 }
 
 int send_model(){

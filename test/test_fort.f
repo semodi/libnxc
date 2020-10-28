@@ -1,6 +1,6 @@
       PROGRAM test
 
-
+      implicit none
       integer    :: na = 1
       integer    :: nua = 1
       integer   :: indxua(1)
@@ -23,11 +23,11 @@
 
       ! Initialize grid, basis, etc.
       nxc_path='test.jit'
+      call nxc_f90_set_code(1)
       call nxc_f90_func_init(xua ,nua, ucell, grid, isua, nxc_symbols, &
-        1, ierr, nxc_path, LEN_TRIM(nxc_path), myBox, edens,1,0)
+        1, ierr, nxc_path, LEN_TRIM(nxc_path), myBox)
 
       write(*,*) achar(27),'[92m',"OK!", &
          achar(27),'[0m'
 
-      END PROGRAM test 
-
+      END PROGRAM test

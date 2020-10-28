@@ -2,7 +2,7 @@
 #define NXC_H
 #include <iostream>
 #include <memory>
-
+#include "defaults.h"
 const int NXC_POLARIZED=2;
 const int NXC_UNPOLARIZED=1;
 
@@ -30,9 +30,9 @@ struct func_param{
   char * symbols; //distinct symbols
   int ns; // symbols.size()
   int * myBox; // box in simulation cell (used mainly for MPI decomposition)
-  int edens = 1;
-  int add = 1;
-  int cuda = 0;
+  int edens = defaults->edens;
+  int add = defaults->add;
+  int cuda = defaults->cuda;
 };
 
 
@@ -64,6 +64,8 @@ struct nxc_func_type{
 
 std::shared_ptr<NXCFunc> get_functional(std::string model);
 
+void nxc_set_code(int code);
+void nxc_use_cuda();
 /**
 * Initializes functional
 *
@@ -136,6 +138,6 @@ void nxc_mgga_exc_vxc(nxc_func_type* p, int np, double rho[],double sigma[], dou
 /**
 * Check if GPU(cuda) is available
 */
-int cuda_available();
+int nxc_cuda_available();
 
 #endif

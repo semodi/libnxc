@@ -1,0 +1,26 @@
+#ifndef DEFAULTS_H
+#define DEFAULTS_H
+
+const int DEFAULT_CODE=0;
+const int SIESTA_CODE=1;
+const int CP2K_CODE=0;
+
+class Defaults {
+  static Defaults *instance;
+  Defaults(){};
+  public:
+    int edens, add, cuda;
+    static Defaults *getInstance() {
+      if (!instance)
+        instance = new Defaults;
+      instance->edens = 1;
+      instance->add = 0;
+      instance->cuda = 0;
+      return instance;
+    }
+    void setDefault(const int code);
+    void useCuda();
+  };
+extern Defaults *defaults;
+
+#endif

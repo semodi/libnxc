@@ -36,11 +36,14 @@ double run_model(int *myBox, bool cuda){
     int ns = 1;
     int edens = 0;
 
+    nxc_set_code(SIESTA_CODE);
     if (cuda){
-      func_param fp = {pos, nua, cell, grid, isa, symbols, ns, myBox, edens, 1, 1};
+      // func_param fp = {pos, nua, cell, grid, isa, symbols, ns, myBox, edens, 1, 1};
+      func_param fp = {pos, nua, cell, grid, isa, symbols, ns, myBox};
+      fp.cuda=1;
       nxc_func_init(&p, "../test.cuda.jit", fp);
     }else{
-      func_param fp = {pos, nua, cell, grid, isa, symbols, ns, myBox, edens, 1, 0};
+      func_param fp = {pos, nua, cell, grid, isa, symbols, ns, myBox};
       nxc_func_init(&p, "../test.jit", fp);
     }
 

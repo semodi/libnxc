@@ -6,11 +6,17 @@
 #include "nxc_func.h"
 extern "C"{
 
+const int DEFAULT_CODE_=0;
+const int SIESTA_CODE_=1;
+const int CP2K_CODE_=0;
+
 nxc_func_type nxc_func;
 
+void nxc_f90_set_code_(int * code);
+void nxc_f90_use_cuda_();
+
 int nxc_f90_func_init_(double  pos[], int * nua, double  cell[], int  grid[], int isa[],
-            char symbols[], int * ns, int * ierr, char  modelpath[], int * pathlen, int myBox[],
-            int * edens, int * add, int * cuda);
+            char symbols[], int * ns, int * ierr, char  modelpath[], int * pathlen, int myBox[]);
 
 
 /**
