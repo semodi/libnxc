@@ -11,20 +11,31 @@ from glob import glob
 import torch
 from abc import ABC, abstractmethod
 
+_predefined_hm = ['HM_LDA','HM_GGA','HM_MGGA']
 
 def LibNXCFunctional(**kwargs):
 
     if 'path' in kwargs:
         return AtomicFunc(kwargs['path'])
-    else:
-        raise Exception('So far only atomic functionals (NeuralXC) supported,' + \
-            ' please specify path')
+    elif 'name' in kwargs:
+        if kwargs.get('kind', '').lower() == 'hm':
+            model_path = os.environ.get('NXC_MODELPATH',None)
+            if model_path:
+                func =  HMFunc(model_path + '/' + kwargs['name'])
+                func._xctype = kwargs['name'].split('_')[1]
+                return func
+            else:
+                raise ValueError('Environment Variable NXC_MODELPATH has to be set.')
 
 
 class NXCFunctional(ABC):
 
-    def __init__(self):
-        pass
+    def __init__(self, path):
+        path = os.path.abspath(path)
+        if not os.path.exists(path):
+            raise Exception('Model not found at {}, please check if path correct'.format(path))
+        self.energy_model =\
+                 torch.jit.load(path + '/xc')
 
     def initialize(self):
         pass
@@ -32,13 +43,83 @@ class NXCFunctional(ABC):
     def compute(self):
         pass
 
+class GridFunc(NXCFunctional):
+    pass
+
+class HMFunc(GridFunc):
+
+    def compute(self, inp, do_exc=True, do_vxc=True, **kwargs):
+        spin = (inp['rho'].ndim == 2)
+        inputs = []
+        rho0 = torch.from_numpy(inp['rho'])
+        inputs.append(rho0)
+        if 'sigma' in inp:
+            drho = torch.from_numpy(inp['sigma'])
+            inputs.append(drho)
+        if 'tau' in inp:
+            tau = torch.from_numpy(inp['tau'])
+            inputs.append(tau)
+
+        if do_vxc:
+            for idx,_ in enumerate(inputs):
+                inputs[idx].requires_grad = True
+
+        torch_inputs = []
+        if spin:
+            rho0_a = rho0[0]
+            rho0_b = rho0[1]
+            if 'sigma' in inp:
+                gamma_a, gamma_ab, gamma_b = drho
+            if 'tau' in inp:
+                tau_a, tau_b = tau
+        else:
+            rho0_a = rho0_b = rho0*0.5
+            if 'sigma' in inp:
+                gamma_a=gamma_b=gamma_ab= drho*0.25
+            if 'tau' in inp:
+                tau_a = tau_b = tau*0.5
+
+        torch_inputs.append(rho0_a.unsqueeze(-1))
+        torch_inputs.append(rho0_b.unsqueeze(-1))
+        if 'sigma' in inp:
+            torch_inputs.append(gamma_a.unsqueeze(-1))
+            torch_inputs.append(gamma_b.unsqueeze(-1))
+            torch_inputs.append(gamma_ab.unsqueeze(-1))
+        if 'tau' in inp:
+            torch_inputs.append(torch.zeros_like(tau_a.unsqueeze(-1))) # Expects laplacian in input
+            torch_inputs.append(torch.zeros_like(tau_b.unsqueeze(-1))) # even though not used
+            torch_inputs.append(tau_a.unsqueeze(-1))
+            torch_inputs.append(tau_b.unsqueeze(-1))
+
+        torch_inputs = torch.cat(torch_inputs, dim = -1)
+        exc = self.energy_model(torch_inputs)[:,0]
+        assert exc.dim() == 1
+        E = torch.dot(exc, torch_inputs[:, 0] + torch_inputs[:, 1])
+        if do_vxc:
+            E.backward()
+        exc = exc.detach().numpy()
+
+        outputs = {}
+        outputs['zk'] = exc
+
+        if do_vxc:
+            outputs['vrho'] = rho0.grad.detach().numpy()
+            if 'sigma' in inp:
+                outputs['vsigma'] = drho.grad.detach().numpy()
+            if 'tau' in inp:
+                outputs['vtau'] = tau.grad.detach().numpy()
+
+        return outputs
+
+
 class AtomicFunc(NXCFunctional):
 
-    def __init__(self, path):
-        model_paths = glob(path + '/*')
 
+    def __init__(self, path):
+        path = os.path.abspath(path)
+        model_paths = glob(path + '/*')
         if not os.path.exists(path):
-            raise Exception('Model not found, please if path correct')
+            raise Exception('Model not found at {}, please check if path correct'.format(path))
 
         self.basis_models = {}
         self.projector_models = {}
@@ -55,13 +136,17 @@ class AtomicFunc(NXCFunctional):
                 self.projector_models[mp.split('_')[-1]] =\
                  torch.jit.load(mp)
             if 'xc' in os.path.basename(mp):
-                self.energy_models[mp.split('_')[-1]] =\
+                spec = mp.split('_')
+                if len(spec) > 1:
+                    spec = spec[-1]
+                else:
+                    spec = 'X'
+                self.energy_models[spec] =\
                  torch.jit.load(mp)
             if 'NO_SC' in os.path.basename(mp):
                 self.no_sc = True
             if 'AGN' in os.path.basename(mp):
                 self.spec_agn = True
-
 
         print('NeuralXC: Model successfully loaded')
 
@@ -83,6 +168,7 @@ class AtomicFunc(NXCFunctional):
         # self.unitcell_inv = torch.inverse(self.unitcell).detach().numpy()
         self.epsilon = torch.zeros([3,3]).double()
         self.epsilon.requires_grad = True
+        self.periodic = periodic
         if periodic:
             self.unitcell_we = torch.mm((torch.eye(3) + self.epsilon), self.unitcell)
         else:
@@ -211,9 +297,12 @@ class AtomicFunc(NXCFunctional):
 
             E = E.detach()
             if edens:
-                grid_factor = len(rho.flatten())/torch.prod(self.grid).detach().numpy()
                 qtot = torch.sum(rho*self.V_cell).detach().numpy()
-                output['zk'] = E/qtot*np.ones_like(rho_np)*grid_factor
+                if self.periodic:
+                    grid_factor = len(rho.flatten())/torch.prod(self.grid).detach().numpy()
+                    output['zk'] = E/qtot*np.ones_like(rho_np)*grid_factor
+                else:
+                    output['zk'] = E/self.grid/qtot/len(self.grid)
             else:
                 output['zk'] = E
 

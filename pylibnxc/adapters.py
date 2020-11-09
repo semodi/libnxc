@@ -3,6 +3,7 @@ from .functional import LibNXCFunctional
 import numpy as np
 Hartree = 27.211386024367243
 
+
 def get_nxc_adapter(kind, path, options={}):
     """ Adapter factory for NeuralXC
     """
