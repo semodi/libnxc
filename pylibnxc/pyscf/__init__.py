@@ -1,1 +1,1 @@
-from .pyscf import RKS
+from .pyscf import RKS, UKS

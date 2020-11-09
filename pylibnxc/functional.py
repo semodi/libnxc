@@ -69,13 +69,13 @@ class HMFunc(GridFunc):
             rho0_a = rho0[0]
             rho0_b = rho0[1]
             if 'sigma' in inp:
-                gamma_a, gamma_ab, gamma_b = drho
+                gamma_a, gamma_ab, gamma_b = drho + 1e-7
             if 'tau' in inp:
                 tau_a, tau_b = tau
         else:
             rho0_a = rho0_b = rho0*0.5
             if 'sigma' in inp:
-                gamma_a=gamma_b=gamma_ab= drho*0.25
+                gamma_a=gamma_b=gamma_ab= drho*0.25 + 1e-7
             if 'tau' in inp:
                 tau_a = tau_b = tau*0.5
 
@@ -83,8 +83,8 @@ class HMFunc(GridFunc):
         torch_inputs.append(rho0_b.unsqueeze(-1))
         if 'sigma' in inp:
             torch_inputs.append(gamma_a.unsqueeze(-1))
-            torch_inputs.append(gamma_b.unsqueeze(-1))
             torch_inputs.append(gamma_ab.unsqueeze(-1))
+            torch_inputs.append(gamma_b.unsqueeze(-1))
         if 'tau' in inp:
             torch_inputs.append(torch.zeros_like(tau_a.unsqueeze(-1))) # Expects laplacian in input
             torch_inputs.append(torch.zeros_like(tau_b.unsqueeze(-1))) # even though not used
@@ -103,11 +103,11 @@ class HMFunc(GridFunc):
         outputs['zk'] = exc
 
         if do_vxc:
-            outputs['vrho'] = rho0.grad.detach().numpy()
+            outputs['vrho'] = rho0.grad.detach().numpy().T
             if 'sigma' in inp:
-                outputs['vsigma'] = drho.grad.detach().numpy()
+                outputs['vsigma'] = drho.grad.detach().numpy().T
             if 'tau' in inp:
-                outputs['vtau'] = tau.grad.detach().numpy()
+                outputs['vtau'] = tau.grad.detach().numpy().T
 
         return outputs
 

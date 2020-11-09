@@ -1,29 +1,34 @@
 from pyscf import dft
 from pyscf.lib.numpy_helper import NPArrayWithTag
-from ..adapters import PySCFNXC, NXCAdapter
+from ..adapters import PySCFNXC, NXCAdapter, get_nxc_adapter
 from ..functional import AtomicFunc, GridFunc, HMFunc, LibNXCFunctional
 import numpy as np
 import os
-def RKS(mol, nxc='', **kwargs):
+from functools import partial
+
+def KS(mol, method, nxc='', **kwargs):
     """ Wrapper for the pyscf RKS (restricted Kohn-Sham) class
     that uses a NeuralXC potential
     """
-    mf = dft.RKS(mol, **kwargs)
+    mf = method(mol, **kwargs)
     if not nxc is '':
         if os.path.exists(nxc):
-            model = get_nxc_adapter(nxc)
+            model = get_nxc_adapter('pyscf', nxc)
             mf.get_veff = veff_mod_atomic(mf, model)
         else:
             dft.libxc.define_xc_(mf._numint, eval_xc, nxc.split('_')[1])
             mf.xc = nxc
     return mf
 
+RKS = partial(KS, method=dft.RKS)
+UKS = partial(KS, method=dft.UKS)
+
 
 def eval_xc(xc_code, rho, spin=0, relativity=0, deriv=1, verbose=None):
     inp = {}
-    if rho.ndim == 1:
-        rho = rho.reshape(1,-1)
     if spin == 0:
+        if rho.ndim == 1:
+            rho = rho.reshape(1,-1)
         inp['rho'] = rho[0]
         if len(rho) > 1:
             dx, dy, dz = rho[1:4]
@@ -33,7 +38,21 @@ def eval_xc(xc_code, rho, spin=0, relativity=0, deriv=1, verbose=None):
             inp['lapl'] = rho[4]
             inp['tau'] = rho[5]
     else:
-        raise NotImplementedError('Spin polarized not implemented yet')
+        rho_a, rho_b = rho
+        if rho_a.ndim == 1:
+            rho_a = rho_a.reshape(1,-1)
+            rho_b = rho_b.reshape(1,-1)
+        inp['rho'] = np.stack([rho_a[0],rho_b[0]])
+        if len(rho_a) > 1:
+            dxa, dya, dza = rho_a[1:4]
+            dxb, dyb, dzb = rho_b[1:4]
+            gamma_a = (dxa**2 + dya**2 + dza**2)
+            gamma_b = (dxb**2 + dyb**2 + dzb**2)
+            gamma_ab = (dxb*dxa + dyb*dya + dzb*dza)
+            inp['sigma'] = np.stack([gamma_a, gamma_ab, gamma_b])
+        if len(rho_a) > 4:
+            inp['lapl'] = np.stack([rho_a[4],rho_b[4]])
+            inp['tau'] = np.stack([rho_a[5],rho_b[5]])
 
     model = LibNXCFunctional(name=xc_code, kind='hm')
     output = model.compute(inp)
