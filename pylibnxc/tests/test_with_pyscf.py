@@ -119,3 +119,54 @@ def test_hm_mgga(polarized):
         mf = pylibnxc.pyscf.RKS(mol, nxc=nxc_path)
         mf.kernel()
         assert np.allclose(mf.e_tot, -76.1998027485784)
+
+@pytest.mark.skipif(not pyscf_found, reason='requires pyscf')
+@pytest.mark.parametrize('name',['H2','LiF','NO'])
+@pytest.mark.parametrize('funcname',['PBE_X', 'PBE'])
+def test_nn_pbe(name, funcname):
+    from pyscf import gto, dft
+    # nxc_path = 'PBE_GGA'
+    func = {'PBE_X':['PBE_X_GGA', 'GGA_X_PBE'],
+            'PBE': ['PBE_GGA', 'PBE']}[funcname]
+    nxc_path = func[0]
+
+    a_str = {'H2': """ 1            .000000    .000   -.377
+                 1            .000000    .000    .377""",
+             'LiF': """ 3            .000000    .000   -.70
+                 9            .000000    .000    .70""",
+             'NO': """ 8            .000000    .000   .000
+                 7            .000000    .000    1.37"""}
+                 
+    if name == 'NO' and funcname == 'PBE':
+        pytest.xfail("PBE (NN) correlation not reliable in spin-polarized case")
+
+    mol = gto.Mole()
+    mol.atom=a_str[name]
+    mol.spin  =0
+    if name == 'NO':
+        mol.spin = 3
+    mol.charge=0
+    mol.basis = "6-311+G*"
+    mol.build()
+    results = []
+    methods = [pylibnxc.pyscf.RKS,
+               pylibnxc.pyscf.UKS]
+    if mol.spin != 0:
+        methods =methods[-1:]
+    for method in methods:
+        mf = method(mol, nxc=nxc_path)
+        mf.grids.level = 4
+        mf.kernel()
+        results.append(mf.e_tot)
+    assert all([np.allclose(r, results[-1]) for r in results])
+    nn_etot = results[0]
+
+    if mol.spin == 0:
+        mf = dft.RKS(mol)
+    else:
+        mf = dft.UKS(mol)
+    mf.xc = func[1]
+    mf.grids.level = 4
+    mf.kernel()
+    pbe_etot = mf.e_tot
+    assert np.allclose(pbe_etot, nn_etot, atol=1e-3)

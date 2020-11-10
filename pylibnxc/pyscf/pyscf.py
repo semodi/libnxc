@@ -7,8 +7,8 @@ import os
 from functools import partial
 
 def KS(mol, method, nxc='', **kwargs):
-    """ Wrapper for the pyscf RKS (restricted Kohn-Sham) class
-    that uses a NeuralXC potential
+    """ Wrapper for the pyscf RKS and UKS class
+    that uses a libnxc functionals
     """
     mf = method(mol, **kwargs)
     if not nxc is '':
@@ -16,7 +16,7 @@ def KS(mol, method, nxc='', **kwargs):
             model = get_nxc_adapter('pyscf', nxc)
             mf.get_veff = veff_mod_atomic(mf, model)
         else:
-            dft.libxc.define_xc_(mf._numint, eval_xc, nxc.split('_')[1])
+            dft.libxc.define_xc_(mf._numint, eval_xc, nxc.split('_')[-1])
             mf.xc = nxc
     return mf
 
@@ -25,6 +25,9 @@ UKS = partial(KS, method=dft.UKS)
 
 
 def eval_xc(xc_code, rho, spin=0, relativity=0, deriv=1, verbose=None):
+    """ Evaluation for grid-based models (not atomic)
+        See pyscf documentation of eval_xc
+    """
     inp = {}
     if spin == 0:
         if rho.ndim == 1:
@@ -54,7 +57,7 @@ def eval_xc(xc_code, rho, spin=0, relativity=0, deriv=1, verbose=None):
             inp['lapl'] = np.stack([rho_a[4],rho_b[4]])
             inp['tau'] = np.stack([rho_a[5],rho_b[5]])
 
-    model = LibNXCFunctional(name=xc_code, kind='hm')
+    model = LibNXCFunctional(name=xc_code, kind='grid')
     output = model.compute(inp)
 
     exc = output.get('zk', None)
@@ -69,7 +72,7 @@ def eval_xc(xc_code, rho, spin=0, relativity=0, deriv=1, verbose=None):
 
 def veff_mod_atomic(mf, model) :
     """ Wrapper to get the modified get_veff() that uses a NeuralXC
-    potential
+    atomic potential
     """
     def eval_xc(xc_code, rho, spin=0, relativity=0, deriv=1, verbose=None):
         rho0 = rho[:1]

@@ -31,8 +31,10 @@ class NXCAdapter(ABC):
         pass
 
 class PySCFNXC(NXCAdapter):
-
+    
     def initialize(self, grid_coords, grid_weights, mol):
+        """ PySCF adapter for atomic (NeuralXC) models
+        """
         self.initialized = True
         self.grid_weights = np.array(grid_weights)
         self._adaptee.initialize(unitcell=np.array(grid_coords), grid=np.array(grid_weights),

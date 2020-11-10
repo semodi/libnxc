@@ -1,5 +1,5 @@
 """
-neuralxc.py
+functional.py
 Implementation of a machine learned density functional
 
 Handles the primary interface that can be accessed by the electronic structure code
@@ -11,18 +11,21 @@ from glob import glob
 import torch
 from abc import ABC, abstractmethod
 
-_predefined_hm = ['HM_LDA','HM_GGA','HM_MGGA']
+_predefined_hm = ['HM_LDA','HM_GGA','HM_MGGA', 'PBE_GGA', 'PBE_X_GGA']
 
 def LibNXCFunctional(**kwargs):
 
     if 'path' in kwargs:
         return AtomicFunc(kwargs['path'])
     elif 'name' in kwargs:
-        if kwargs.get('kind', '').lower() == 'hm':
+        if kwargs.get('kind', '').lower() == 'grid':
             model_path = os.environ.get('NXC_MODELPATH',None)
             if model_path:
-                func =  HMFunc(model_path + '/' + kwargs['name'])
-                func._xctype = kwargs['name'].split('_')[1]
+                if 'HM' in kwargs['name']:
+                    func =  HMFunc(model_path + '/' + kwargs['name'])
+                else:
+                    func =  GridFunc(model_path + '/' + kwargs['name'])
+                func._xctype = kwargs['name'].split('_')[-1]
                 return func
             else:
                 raise ValueError('Environment Variable NXC_MODELPATH has to be set.')
@@ -44,9 +47,8 @@ class NXCFunctional(ABC):
         pass
 
 class GridFunc(NXCFunctional):
-    pass
 
-class HMFunc(GridFunc):
+    _gamma_eps = 0
 
     def compute(self, inp, do_exc=True, do_vxc=True, **kwargs):
         spin = (inp['rho'].ndim == 2)
@@ -69,13 +71,13 @@ class HMFunc(GridFunc):
             rho0_a = rho0[0]
             rho0_b = rho0[1]
             if 'sigma' in inp:
-                gamma_a, gamma_ab, gamma_b = drho + 1e-7
+                gamma_a, gamma_ab, gamma_b = drho + self._gamma_eps
             if 'tau' in inp:
                 tau_a, tau_b = tau
         else:
             rho0_a = rho0_b = rho0*0.5
             if 'sigma' in inp:
-                gamma_a=gamma_b=gamma_ab= drho*0.25 + 1e-7
+                gamma_a=gamma_b=gamma_ab= drho*0.25 + self._gamma_eps
             if 'tau' in inp:
                 tau_a = tau_b = tau*0.5
 
@@ -111,6 +113,9 @@ class HMFunc(GridFunc):
 
         return outputs
 
+class HMFunc(GridFunc):
+    _gamma_eps = 1e-7
+
 
 class AtomicFunc(NXCFunctional):
 
@@ -136,12 +141,7 @@ class AtomicFunc(NXCFunctional):
                 self.projector_models[mp.split('_')[-1]] =\
                  torch.jit.load(mp)
             if 'xc' in os.path.basename(mp):
-                spec = mp.split('_')
-                if len(spec) > 1:
-                    spec = spec[-1]
-                else:
-                    spec = 'X'
-                self.energy_models[spec] =\
+                self.energy_models[mp.split('_')[-1]] =\
                  torch.jit.load(mp)
             if 'NO_SC' in os.path.basename(mp):
                 self.no_sc = True
