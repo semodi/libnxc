@@ -79,4 +79,5 @@ int nxc_f90_mgga_exc_vxc_(int* np, double rho[], double sigma[], double lapl[], 
    double exc [], double vrho[], double vsigma[], double vlapl[], double vtau[], int* ierr);
 }
 
+void nxc_f90_func_get_family(int * family);
 #endif

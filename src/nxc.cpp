@@ -45,3 +45,7 @@ void nxc_set_code(int code){
 void nxc_use_cuda(){
   defaults->useCuda();
 }
+
+int nxc_func_get_family(nxc_func_type* p){
+  return p->func->get_family();
+}

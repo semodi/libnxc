@@ -9,13 +9,14 @@ class Defaults {
   static Defaults *instance;
   Defaults(){};
   public:
-    int edens, add, cuda;
+    int edens, add, cuda, gamma;
     static Defaults *getInstance() {
       if (!instance)
         instance = new Defaults;
       instance->edens = 1;
       instance->add = 0;
       instance->cuda = 0;
+      instance->gamma = 1;
       return instance;
     }
     void setDefault(const int code);

@@ -42,5 +42,7 @@ int nxc_f90_mgga_exc_vxc_(int* np, double rho[], double sigma[], double lapl[], 
   return 0;
 }
 
-
+void nxc_f90_func_get_family_(int * family){
+  *family = nxc_func_get_family(&nxc_func);
+}
 }

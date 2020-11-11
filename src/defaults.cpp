@@ -4,6 +4,7 @@ void Defaults::setDefault(const int code){
         case SIESTA_CODE:
           edens=0;
           add=1;
+          gamma=1;
           break;
     }
 }

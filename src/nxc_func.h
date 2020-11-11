@@ -12,6 +12,7 @@ const auto options_int = torch::TensorOptions().dtype(torch::kInt);
 const int LDA_TYPE=0;
 const int GGA_TYPE=1;
 const int MGGA_TYPE=2;
+const int ATOMIC_TYPE=4;
 
 const int DEVICE_CUDA=1;
 const int DEVICE_CPU=0;
@@ -56,6 +57,7 @@ class GridFunc : public NXCFunc{
     modules model;
     bool edens;
     bool add;
+    bool gamma;
     torch::Tensor tcell, tgrid, V_cell;
 
 };
@@ -66,6 +68,7 @@ class LDAFunc : public GridFunc{
     // LDAFunc(std::string modelname) : GridFunc(modelname){};
     using GridFunc::GridFunc;
     void exc_vxc(int np, double rho[], double * exc, double vrho[]);
+    int get_family(){return LDA_TYPE;};
 };
 class GGAFunc : public GridFunc{
 
@@ -74,6 +77,7 @@ class GGAFunc : public GridFunc{
     using GridFunc::GridFunc;
     void exc_vxc(int np, double rho[],  double sigma[],
        double * exc, double vrho[], double vsigma[]);
+    int get_family(){return GGA_TYPE;};
 };
 class MGGAFunc : public GridFunc{
 
@@ -82,6 +86,7 @@ class MGGAFunc : public GridFunc{
     // MGGAFunc(std::string modelname){};
     void exc_vxc(int np, double rho[], double sigma[], double lapl[],
         double tau[], double * exc, double vrho[], double vsigma[], double vlapl[], double vtau[]);
+    int get_family(){return MGGA_TYPE;};
 };
 
 class AtomicFunc : public NXCFunc {
@@ -93,6 +98,7 @@ class AtomicFunc : public NXCFunc {
     void exc_vxc_fs(int np, double rho[], double * exc, double vrho[],
                           double forces[], double stress[]);
     void to_cuda();
+    int get_family(){return ATOMIC_TYPE;};
 
 
   private:
@@ -114,6 +120,7 @@ class AtomicFunc : public NXCFunc {
     int box_dim[3];
     bool edens;
     bool add;
+    bool gamma;
 
     void build_basis();
     void get_descriptors(torch::Tensor &rho, torch::Tensor* descr);

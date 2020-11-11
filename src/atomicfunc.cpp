@@ -64,6 +64,7 @@ void AtomicFunc::init(func_param fp, int nspin){
 
   edens = fp.edens;
   add = fp.add;
+  gamma = fp.gamma;
   int npos = (fp.nua) * 3;
   tpos_flat = torch::from_blob(fp.pos, npos, options_dp).clone();
   tpos_flat += 1e-7;

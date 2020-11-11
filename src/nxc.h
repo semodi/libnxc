@@ -33,6 +33,7 @@ struct func_param{
   int edens = defaults->edens;
   int add = defaults->add;
   int cuda = defaults->cuda;
+  int gamma = defaults->gamma;
 };
 
 
@@ -52,6 +53,7 @@ public:
   virtual void exc_vxc_fs(int np, double rho[], double * exc, double vrho[],
                         double forces[], double stress[]){};
   virtual void to_cuda(){};
+  virtual int get_family(){return -1;};
 protected:
   int nspin;
   int device;
@@ -139,5 +141,7 @@ void nxc_mgga_exc_vxc(nxc_func_type* p, int np, double rho[],double sigma[], dou
 * Check if GPU(cuda) is available
 */
 int nxc_cuda_available();
+
+int nxc_func_get_family(nxc_func_type* p);
 
 #endif
