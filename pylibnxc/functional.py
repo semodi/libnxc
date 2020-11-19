@@ -12,6 +12,7 @@ import torch
 from abc import ABC, abstractmethod
 
 _predefined_hm = ['LDA_HM','GGA_HM','MGGA_HM', 'GGA_HM', 'GGA_X_PBE']
+_default_modelpath = os.path.basename(__file__) + '/../models/'
 
 def LibNXCFunctional(**kwargs):
 
@@ -19,7 +20,7 @@ def LibNXCFunctional(**kwargs):
         return AtomicFunc(kwargs['path'])
     elif 'name' in kwargs:
         if kwargs.get('kind', '').lower() == 'grid':
-            model_path = os.environ.get('NXC_MODELPATH',None)
+            model_path = os.environ.get('NXC_MODELPATH', _default_modelpath)
             if model_path:
                 if 'HM' in kwargs['name']:
                     func =  HMFunc(model_path + '/' + kwargs['name'])

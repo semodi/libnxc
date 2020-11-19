@@ -4,7 +4,7 @@ VPATH=../src
 #
 #
 
-CXXFLAGS=-DAT_PARALLEL_OPENMP=1 -isystem $(TORCH)/include -isystem $(TORCH)/include/torch/csrc/api/include  -DBOOST_MATH_DISABLE_FLOAT128 -fPIC   -D_GLIBCXX_USE_CXX11_ABI=1 -Wall -Wextra -Wno-unused-parameter -Wno-missing-field-initializers -Wno-write-strings -Wno-unknown-pragmas -Wno-missing-braces -fopenmp -std=gnu++17 -I/usr/include
+CXXFLAGS=-DAT_PARALLEL_OPENMP=1 -isystem $(TORCH)/include -isystem $(TORCH)/include/torch/csrc/api/include  -DBOOST_MATH_DISABLE_FLOAT128 -fPIC   -D_GLIBCXX_USE_CXX11_ABI=1 -Wall -Wextra -Wno-unused-parameter -Wno-missing-field-initializers -Wno-write-strings -Wno-unknown-pragmas -Wno-missing-braces -fopenmp -std=gnu++17 -I/usr/include -DNXC_DEFAULTPATH=${CURDIR}/../models/
 MPIFLAG=-DMPI
 
 ifneq ($(MPI),)

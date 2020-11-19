@@ -2,8 +2,11 @@
 #include "nxc_func.h"
 #include <torch/script.h> // One-stop header.
 #include <filesystem>
-// #include "nxc_mpi.h"
+#define STRINGIZER(arg)     #arg
+#define STR_VALUE(arg)      STRINGIZER(arg)
+#define NXC_DEFAULTPATH_STRING STR_VALUE(NXC_DEFAULTPATH)
 
+const std::string default_modeldir = NXC_DEFAULTPATH_STRING;
 
 inline void distribute_v(double * v_src, double * v_tar,
    int nouter, int ninner, int offset, double mult, bool add){
@@ -25,15 +28,14 @@ inline void distribute_v(double * v_src, double * v_tar,
 
 GridFunc::GridFunc(std::string modelname){
 
-    const char* modeldir;
     if(std::getenv("NXC_MODELPATH")){
+        const char* modeldir;
         modeldir = std::getenv("NXC_MODELPATH");
+        modelname = std::string(modeldir) + modelname;
     }else{
-        std::cout << "Need to set NXC_MODELPATH environment variable!" << std::endl;
-        throw ("Need to set NXC_MODELPATH environment variable!");
+        modelname = default_modeldir + modelname;
     }
 
-    modelname = std::string(modeldir) + modelname;
     std::string path;
     try {
       path =  modelname + "/xc";
