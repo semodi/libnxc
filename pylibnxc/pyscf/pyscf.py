@@ -6,18 +6,21 @@ import numpy as np
 import os
 from functools import partial
 
-def KS(mol, method, nxc='', **kwargs):
+def KS(mol, method, nxc='', nxc_kind='grid', **kwargs):
     """ Wrapper for the pyscf RKS and UKS class
     that uses a libnxc functionals
     """
     mf = method(mol, **kwargs)
-    if not nxc is '':
-        if os.path.exists(nxc):
+    if nxc != '':
+        if nxc_kind.lower() == 'atomic':
             model = get_nxc_adapter('pyscf', nxc)
             mf.get_veff = veff_mod_atomic(mf, model)
-        else:
-            dft.libxc.define_xc_(mf._numint, eval_xc, nxc.split('_')[0])
+        elif nxc_kind.lower() == 'grid':
+            dft.libxc.define_xc_(mf._numint, eval_xc,
+                os.path.basename(nxc).split('_')[0])
             mf.xc = nxc
+        else:
+            raise ValueError("{} not a valid nxc_kind. Valid options are 'atomic' or 'grid'".format(nxc_kind))
     return mf
 
 RKS = partial(KS, method=dft.RKS)
@@ -57,7 +60,7 @@ def eval_xc(xc_code, rho, spin=0, relativity=0, deriv=1, verbose=None):
             inp['lapl'] = np.stack([rho_a[4],rho_b[4]])
             inp['tau'] = np.stack([rho_a[5],rho_b[5]])
 
-    model = LibNXCFunctional(name=xc_code, kind='grid')
+    model = LibNXCFunctional(xc_code, kind='grid')
     output = model.compute(inp)
 
     exc = output.get('zk', None)
@@ -92,7 +95,7 @@ def veff_mod_atomic(mf, model) :
         return exc, vxc, fxc, kxc
 
     def get_veff(mol=None, dm=None, dm_last=0, vhf_last=0, hermi=1):
-        mf.define_xc_(mf.xc,'GGA')
+        mf.define_xc_(mf.xc,'GGA') #TODO: This doesn't seem quite right
         veff = dft.rks.get_veff(mf, mol, dm, dm_last, vhf_last, hermi)
         mf.define_xc_(eval_xc,'GGA')
         model.initialize(mf.grids.coords, mf.grids.weights, mol)

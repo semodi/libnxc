@@ -11,25 +11,30 @@ from glob import glob
 import torch
 from abc import ABC, abstractmethod
 
-_predefined_hm = ['LDA_HM','GGA_HM','MGGA_HM', 'GGA_HM', 'GGA_X_PBE']
-_default_modelpath = os.path.basename(__file__) + '/../models/'
+_default_modelpath = os.path.dirname(__file__) + '/../models/'
 
-def LibNXCFunctional(**kwargs):
+def LibNXCFunctional(name, **kwargs):
 
-    if 'path' in kwargs:
-        return AtomicFunc(kwargs['path'])
-    elif 'name' in kwargs:
-        if kwargs.get('kind', '').lower() == 'grid':
-            model_path = os.environ.get('NXC_MODELPATH', _default_modelpath)
-            if model_path:
-                if 'HM' in kwargs['name']:
-                    func =  HMFunc(model_path + '/' + kwargs['name'])
-                else:
-                    func =  GridFunc(model_path + '/' + kwargs['name'])
-                func._xctype = kwargs['name'].split('_')[0]
-                return func
-            else:
-                raise ValueError('Environment Variable NXC_MODELPATH has to be set.')
+    #Resolve path
+    model_path = os.environ.get('NXC_MODELPATH', _default_modelpath)
+
+    #Check if name is path
+    if os.path.exists(name):
+        path = name
+    elif os.path.exists(os.path.join(model_path, name)):
+        path = os.path.join(model_path, name)
+    else:
+        raise ValueError('Model {} could not be found, please check name/path'.format(name))
+
+    if kwargs.get('kind', '').lower() == 'grid':
+        if 'HM' in name:
+            func =  HMFunc(path)
+        else:
+            func =  GridFunc(path)
+        func._xctype = os.path.basename(name).split('_')[0]
+        return func
+    elif kwargs.get('kind', '').lower() == 'atomic':
+        return AtomicFunc(name)
 
 
 class NXCFunctional(ABC):

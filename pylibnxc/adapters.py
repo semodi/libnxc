@@ -19,7 +19,7 @@ def get_nxc_adapter(kind, path, options={}):
 class NXCAdapter(ABC):
     def __init__(self, path, *args):
         path = ''.join(path.split())
-        self._adaptee = LibNXCFunctional(path=path)
+        self._adaptee = LibNXCFunctional(name=path, kind='atomic')
         self.initialized = False
 
     @abstractmethod
@@ -31,7 +31,7 @@ class NXCAdapter(ABC):
         pass
 
 class PySCFNXC(NXCAdapter):
-    
+
     def initialize(self, grid_coords, grid_weights, mol):
         """ PySCF adapter for atomic (NeuralXC) models
         """

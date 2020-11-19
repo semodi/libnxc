@@ -24,7 +24,7 @@ def test_pyscf():
      zip(np.load(test_dir + '/ref/pyscf_h2o.npy'), [mf.e_tot, mf.get_veff().exc])])
 
 def test_load_atomic():
-    func = pylibnxc.LibNXCFunctional(path = test_dir + '/../../test/test.rad.jit')
+    func = pylibnxc.LibNXCFunctional(name = test_dir + '/../../test/test.rad.jit', kind='atomic')
     assert type(func) == pylibnxc.functional.AtomicFunc
 
 @pytest.mark.skipif(not pyscf_found, reason='requires pyscf')
@@ -32,7 +32,7 @@ def test_atomic():
     from pyscf import gto, dft
     nxc_path = test_dir + '/../../test/test.rad.jit'
     mol = gto.M(atom='O  0  0  0; H  0 1 0 ; H 0 0 1', basis='6-31g*')
-    mf = pylibnxc.pyscf.RKS(mol, nxc = nxc_path)
+    mf = pylibnxc.pyscf.RKS(mol, nxc = nxc_path, nxc_kind='atomic')
     mf.xc = 'PBE'
     mf.grids.level = 3
     mf.kernel()
