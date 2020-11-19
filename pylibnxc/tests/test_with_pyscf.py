@@ -44,7 +44,7 @@ def test_atomic():
 @pytest.mark.parametrize('polarized',[False,True])
 def test_hm_lda(polarized):
     from pyscf import gto, dft
-    nxc_path = 'HM_LDA'
+    nxc_path = 'LDA_HM'
     mol = gto.Mole()
     if polarized:
         mol.atom=""" 3 0 0 0"""
@@ -70,7 +70,7 @@ def test_hm_lda(polarized):
 @pytest.mark.parametrize('polarized',[False,True])
 def test_hm_gga(polarized):
     from pyscf import gto, dft
-    nxc_path = 'HM_GGA'
+    nxc_path = 'GGA_HM'
     mol = gto.Mole()
     if polarized:
         mol.atom=""" 3 0 0 0"""
@@ -98,7 +98,7 @@ def test_hm_gga(polarized):
 @pytest.mark.parametrize('polarized',[False,True])
 def test_hm_mgga(polarized):
     from pyscf import gto, dft
-    nxc_path = 'HM_MGGA'
+    nxc_path = 'MGGA_HM'
     mol = gto.Mole()
     if polarized:
         mol.atom=""" 3 0 0 0"""
@@ -126,8 +126,8 @@ def test_hm_mgga(polarized):
 def test_nn_pbe(name, funcname):
     from pyscf import gto, dft
     # nxc_path = 'PBE_GGA'
-    func = {'PBE_X':['PBE_X_GGA', 'GGA_X_PBE'],
-            'PBE': ['PBE_GGA', 'PBE']}[funcname]
+    func = {'PBE_X':['GGA_X_PBE', 'GGA_X_PBE'],
+            'PBE': ['GGA_PBE', 'PBE']}[funcname]
     nxc_path = func[0]
 
     a_str = {'H2': """ 1            .000000    .000   -.377
@@ -136,7 +136,7 @@ def test_nn_pbe(name, funcname):
                  9            .000000    .000    .70""",
              'NO': """ 8            .000000    .000   .000
                  7            .000000    .000    1.37"""}
-                 
+
     if name == 'NO' and funcname == 'PBE':
         pytest.xfail("PBE (NN) correlation not reliable in spin-polarized case")
 

@@ -16,7 +16,7 @@ def KS(mol, method, nxc='', **kwargs):
             model = get_nxc_adapter('pyscf', nxc)
             mf.get_veff = veff_mod_atomic(mf, model)
         else:
-            dft.libxc.define_xc_(mf._numint, eval_xc, nxc.split('_')[-1])
+            dft.libxc.define_xc_(mf._numint, eval_xc, nxc.split('_')[0])
             mf.xc = nxc
     return mf
 

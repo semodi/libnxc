@@ -3,9 +3,9 @@
 void load_hm_models(){
     nxc_func_type p;
     func_param fp;
-    nxc_func_init(&p,"HM_LDA", fp);
-    nxc_func_init(&p,"HM_GGA", fp);
-    nxc_func_init(&p,"HM_MGGA", fp);
+    nxc_func_init(&p,"LDA_HM", fp);
+    nxc_func_init(&p,"GGA_HM", fp);
+    nxc_func_init(&p,"MGGA_HM", fp);
 }
 
 void test_hm_lda(double vrho_up[],double exc_up[], double vrho_p[], double exc_p[], bool cuda){
@@ -14,7 +14,7 @@ void test_hm_lda(double vrho_up[],double exc_up[], double vrho_p[], double exc_p
     fp.edens = 1;
     fp.add = 0;
     int nspin = NXC_UNPOLARIZED;
-    nxc_func_init(&p,"HM_LDA", fp, nspin);
+    nxc_func_init(&p,"LDA_HM", fp, nspin);
     if (cuda) p.func->to_cuda();
     const int np = 70;
     double rho_up[70];
@@ -25,7 +25,7 @@ void test_hm_lda(double vrho_up[],double exc_up[], double vrho_p[], double exc_p
     nxc_lda_exc_vxc(&p, np, rho_up, exc_up, vrho_up);
 
     nspin = NXC_POLARIZED;
-    nxc_func_init(&p,"HM_LDA", fp, nspin);
+    nxc_func_init(&p,"LDA_HM", fp, nspin);
     double rho_p[140];
     for( int is=0; is<2; ++is){
       for( int i =0; i< np; ++i){
@@ -45,7 +45,7 @@ void test_hm_gga(double vrho_up[], double vsigma_up[], double exc_up[],
     fp.add = 0;
     fp.gamma = 0;
     int nspin = NXC_UNPOLARIZED;
-    nxc_func_init(&p,"HM_GGA", fp, nspin);
+    nxc_func_init(&p,"GGA_HM", fp, nspin);
     if (cuda) p.func->to_cuda();
     const int np = 100;
     double rho_up[100];
@@ -57,7 +57,7 @@ void test_hm_gga(double vrho_up[], double vsigma_up[], double exc_up[],
     nxc_gga_exc_vxc(&p, np, rho_up, sigma_up, exc_up, vrho_up, vsigma_up);
 
     nspin = NXC_POLARIZED;
-    nxc_func_init(&p,"HM_GGA", fp, nspin);
+    nxc_func_init(&p,"GGA_HM", fp, nspin);
     double rho_p[200];
     double sigma_p[300];
     for( int is=0; is<2; ++is){
@@ -81,7 +81,7 @@ void test_hm_mgga(double vrho_up[], double vsigma_up[], double vlapl_up[], doubl
     fp.add = 0;
     fp.gamma = 0;
     int nspin = NXC_UNPOLARIZED;
-    nxc_func_init(&p,"HM_MGGA", fp, nspin);
+    nxc_func_init(&p,"MGGA_HM", fp, nspin);
     // if (cuda) p.func->to_cuda(); //TODO: Figure out why seg fault
 
     const int np = 100;
@@ -99,7 +99,7 @@ void test_hm_mgga(double vrho_up[], double vsigma_up[], double vlapl_up[], doubl
        exc_up, vrho_up, vsigma_up, vlapl_up, vtau_up);
 
     nspin = NXC_POLARIZED;
-    nxc_func_init(&p,"HM_MGGA", fp, nspin);
+    nxc_func_init(&p,"MGGA_HM", fp, nspin);
     double rho_p[200];
     double sigma_p[300];
     double tau_p[200];

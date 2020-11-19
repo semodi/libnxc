@@ -11,7 +11,7 @@ from glob import glob
 import torch
 from abc import ABC, abstractmethod
 
-_predefined_hm = ['HM_LDA','HM_GGA','HM_MGGA', 'PBE_GGA', 'PBE_X_GGA']
+_predefined_hm = ['LDA_HM','GGA_HM','MGGA_HM', 'GGA_HM', 'GGA_X_PBE']
 
 def LibNXCFunctional(**kwargs):
 
@@ -25,7 +25,7 @@ def LibNXCFunctional(**kwargs):
                     func =  HMFunc(model_path + '/' + kwargs['name'])
                 else:
                     func =  GridFunc(model_path + '/' + kwargs['name'])
-                func._xctype = kwargs['name'].split('_')[-1]
+                func._xctype = kwargs['name'].split('_')[0]
                 return func
             else:
                 raise ValueError('Environment Variable NXC_MODELPATH has to be set.')

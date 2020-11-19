@@ -18,11 +18,11 @@ const int DEVICE_CUDA=1;
 const int DEVICE_CPU=0;
 
 const std::vector<std::string> model_names = {
-  "HM_LDA",
-  "HM_GGA",
-  "HM_MGGA",
-  "PBE_GGA",
-  "PBE_X_GGA"
+  "LDA_HM",
+  "GGA_HM",
+  "MGGA_HM",
+  "GGA_PBE",
+  "GGA_X_PBE"
 };
 const std::vector<int> model_types = {
   LDA_TYPE,
