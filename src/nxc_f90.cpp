@@ -14,7 +14,7 @@ int nxc_f90_func_init_(double  pos[], int * nua, double  cell[], int  grid[], in
     modeldir = modeldir.erase(*pathlen, std::string::npos);
     func_param fp = {pos, *nua, cell, grid, isa, symbols, *ns, myBox};
     nxc_func_init(&nxc_func, modeldir, fp);
-
+    func_set=true;
   return 0;
 }
 
@@ -43,6 +43,10 @@ int nxc_f90_mgga_exc_vxc_(int* np, double rho[], double sigma[], double lapl[], 
 }
 
 void nxc_f90_func_get_family_(int * family){
-  *family = nxc_func_get_family(&nxc_func);
+  if (func_set){
+    *family = nxc_func_get_family(&nxc_func);
+  }else{
+    *family = -1;
+  }
 }
 }

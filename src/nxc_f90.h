@@ -9,7 +9,7 @@ extern "C"{
 const int DEFAULT_CODE_=0;
 const int SIESTA_CODE_=1;
 const int CP2K_CODE_=0;
-
+bool func_set=false;
 nxc_func_type nxc_func;
 
 void nxc_f90_set_code_(int * code);

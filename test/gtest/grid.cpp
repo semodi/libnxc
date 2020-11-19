@@ -43,6 +43,7 @@ void test_hm_gga(double vrho_up[], double vsigma_up[], double exc_up[],
     func_param fp;
     fp.edens = 1;
     fp.add = 0;
+    fp.gamma = 0;
     int nspin = NXC_UNPOLARIZED;
     nxc_func_init(&p,"HM_GGA", fp, nspin);
     if (cuda) p.func->to_cuda();
@@ -78,9 +79,11 @@ void test_hm_mgga(double vrho_up[], double vsigma_up[], double vlapl_up[], doubl
     func_param fp;
     fp.edens = 1;
     fp.add = 0;
+    fp.gamma = 0;
     int nspin = NXC_UNPOLARIZED;
     nxc_func_init(&p,"HM_MGGA", fp, nspin);
-    if (cuda) p.func->to_cuda();
+    // if (cuda) p.func->to_cuda(); //TODO: Figure out why seg fault
+
     const int np = 100;
     double rho_up[100];
     double sigma_up[100];

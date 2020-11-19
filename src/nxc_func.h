@@ -20,12 +20,16 @@ const int DEVICE_CPU=0;
 const std::vector<std::string> model_names = {
   "HM_LDA",
   "HM_GGA",
-  "HM_MGGA"
+  "HM_MGGA",
+  "PBE_GGA",
+  "PBE_X_GGA"
 };
 const std::vector<int> model_types = {
   LDA_TYPE,
   GGA_TYPE,
-  MGGA_TYPE
+  MGGA_TYPE,
+  GGA_TYPE,
+  GGA_TYPE
 };
 
 struct modules{
