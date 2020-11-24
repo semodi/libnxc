@@ -54,15 +54,37 @@ class NXCFunctional(ABC):
 
 class GridFunc(NXCFunctional):
 
-    _gamma_eps = 0
+    _gamma_eps = 1e-8
+    # _gamma_eps = 0
 
     def compute(self, inp, do_exc=True, do_vxc=True, **kwargs):
+
+        sigma_grad={}
+        def save_grad(name):
+            def hook(grad):
+                sigma_grad[name] = grad.detach().numpy().T
+            return hook
+
         spin = (inp['rho'].ndim == 2)
         inputs = []
         rho0 = torch.from_numpy(inp['rho'])
         inputs.append(rho0)
         if 'sigma' in inp:
             drho = torch.from_numpy(inp['sigma'])
+            inputs.append(drho)
+        elif 'gamma' in inp:
+            drho = torch.from_numpy(inp['gamma'])
+            drho.requires_grad = True
+            if spin:
+                dxa, dya, dza = drho[0, :]
+                dxb, dyb, dzb = drho[1, :]
+            else:
+                dxa, dya, dza = drho*0.5
+                dxb, dyb, dzb = drho*0.5
+
+            sigma_a = (dxa**2 + dya**2 + dza**2) + self._gamma_eps
+            sigma_b = (dxb**2 + dyb**2 + dzb**2) + self._gamma_eps
+            sigma_ab = (dxb*dxa + dyb*dya + dzb*dza) + self._gamma_eps
             inputs.append(drho)
         if 'tau' in inp:
             tau = torch.from_numpy(inp['tau'])
@@ -77,22 +99,22 @@ class GridFunc(NXCFunctional):
             rho0_a = rho0[0]
             rho0_b = rho0[1]
             if 'sigma' in inp:
-                gamma_a, gamma_ab, gamma_b = drho + self._gamma_eps
+                sigma_a, sigma_ab, sigma_b = drho + self._gamma_eps
             if 'tau' in inp:
                 tau_a, tau_b = tau
         else:
             rho0_a = rho0_b = rho0*0.5
             if 'sigma' in inp:
-                gamma_a=gamma_b=gamma_ab= drho*0.25 + self._gamma_eps
+                sigma_a=sigma_b=sigma_ab= drho*0.25 + self._gamma_eps
             if 'tau' in inp:
                 tau_a = tau_b = tau*0.5
 
         torch_inputs.append(rho0_a.unsqueeze(-1))
         torch_inputs.append(rho0_b.unsqueeze(-1))
-        if 'sigma' in inp:
-            torch_inputs.append(gamma_a.unsqueeze(-1))
-            torch_inputs.append(gamma_ab.unsqueeze(-1))
-            torch_inputs.append(gamma_b.unsqueeze(-1))
+        if 'gamma' in inp or 'sigma' in inp:
+            torch_inputs.append(sigma_a.unsqueeze(-1))
+            torch_inputs.append(sigma_ab.unsqueeze(-1))
+            torch_inputs.append(sigma_b.unsqueeze(-1))
         if 'tau' in inp:
             torch_inputs.append(torch.zeros_like(tau_a.unsqueeze(-1))) # Expects laplacian in input
             torch_inputs.append(torch.zeros_like(tau_b.unsqueeze(-1))) # even though not used
@@ -103,7 +125,12 @@ class GridFunc(NXCFunctional):
         exc = self.energy_model(torch_inputs)[:,0]
         assert exc.dim() == 1
         E = torch.dot(exc, torch_inputs[:, 0] + torch_inputs[:, 1])
+
         if do_vxc:
+            if 'gamma' in inp:
+                sigma_a.register_hook(save_grad('a'))
+                sigma_ab.register_hook(save_grad('ab'))
+                sigma_b.register_hook(save_grad('b'))
             E.backward()
         exc = exc.detach().numpy()
 
@@ -114,6 +141,13 @@ class GridFunc(NXCFunctional):
             outputs['vrho'] = rho0.grad.detach().numpy().T
             if 'sigma' in inp:
                 outputs['vsigma'] = drho.grad.detach().numpy().T
+            elif 'gamma' in inp:
+                outputs['vgamma'] = drho.grad.detach().numpy().T
+                outputs['vsigma'] = np.stack([sigma_grad['a'],
+                                              sigma_grad['ab'],
+                                              sigma_grad['b']], axis=0).T
+                if not spin:
+                    outputs['vsigma'] = outputs['vsigma'][:,0]
             if 'tau' in inp:
                 outputs['vtau'] = tau.grad.detach().numpy().T
 

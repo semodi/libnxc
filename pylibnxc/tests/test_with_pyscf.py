@@ -144,7 +144,7 @@ def test_nn_pbe(name, funcname):
     mol.atom=a_str[name]
     mol.spin  =0
     if name == 'NO':
-        mol.spin = 3
+        mol.spin = 1
     mol.charge=0
     mol.basis = "6-311+G*"
     mol.build()
@@ -155,7 +155,7 @@ def test_nn_pbe(name, funcname):
         methods =methods[-1:]
     for method in methods:
         mf = method(mol, nxc=nxc_path)
-        mf.grids.level = 4
+        mf.grids.level = 6
         mf.kernel()
         results.append(mf.e_tot)
     assert all([np.allclose(r, results[-1]) for r in results])
@@ -169,4 +169,4 @@ def test_nn_pbe(name, funcname):
     mf.grids.level = 4
     mf.kernel()
     pbe_etot = mf.e_tot
-    assert np.allclose(pbe_etot, nn_etot, atol=1e-3)
+    assert np.allclose(pbe_etot, nn_etot, atol=1e-4)
