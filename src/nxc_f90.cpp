@@ -7,8 +7,8 @@ void nxc_f90_set_code_(int * code){
 void nxc_f90_use_cuda_(){
   nxc_use_cuda();
 }
-int nxc_f90_func_init_(double  pos[], int * nua, double  cell[], int  grid[], int isa[],
-            char symbols[], int * ns, int * ierr, char  modelpath[], int * pathlen, int myBox[]){
+int nxc_f90_atmfunc_init_(double  pos[], int * nua, double  cell[], int  grid[], int isa[],
+            char symbols[], int * ns, char  modelpath[], int * pathlen, int myBox[], int* ierr){
 
     std::string modeldir(modelpath);
     modeldir = modeldir.erase(*pathlen, std::string::npos);
@@ -18,6 +18,14 @@ int nxc_f90_func_init_(double  pos[], int * nua, double  cell[], int  grid[], in
   return 0;
 }
 
+int nxc_f90_func_init_(char  modelpath[], int * pathlen, int * ierr){
+    std::string modeldir(modelpath);
+    modeldir = modeldir.erase(*pathlen, std::string::npos);
+    func_param fp;
+    nxc_func_init(&nxc_func, modeldir, fp);
+    func_set=true;
+  return 0;
+}
 int nxc_f90_lda_exc_vxc_(int* np, double rho[], double exc [], double vrho[], int* ierr) {
   nxc_lda_exc_vxc(&nxc_func, *np, rho, exc, vrho);
   return 0;

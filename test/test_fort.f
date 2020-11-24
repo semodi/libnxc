@@ -22,10 +22,15 @@
       integer               :: edens=0
 
       ! Initialize grid, basis, etc.
-      nxc_path='test.jit'
-      call nxc_f90_set_code(1)
-      call nxc_f90_func_init(xua ,nua, ucell, grid, isua, nxc_symbols, &
-        1, ierr, nxc_path, LEN_TRIM(nxc_path), myBox)
+  !    nxc_path='test.jit'
+
+  !    call nxc_f90_set_code(1)
+  !    call nxc_f90_atmfunc_init(xua ,nua, ucell, grid, isua, nxc_symbols, &
+  !      1,nxc_path, LEN_TRIM(nxc_path), myBox, ierr)
+
+      nxc_path='GGA_PBE'
+      call nxc_f90_set_code(0)
+      call nxc_f90_func_init(nxc_path, LEN_TRIM(nxc_path), ierr)
 
       write(*,*) achar(27),'[92m',"OK!", &
          achar(27),'[0m'

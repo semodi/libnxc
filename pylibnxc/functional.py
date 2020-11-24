@@ -26,14 +26,14 @@ def LibNXCFunctional(name, **kwargs):
     else:
         raise ValueError('Model {} could not be found, please check name/path'.format(name))
 
-    if kwargs.get('kind', '').lower() == 'grid':
+    if kwargs.get('kind', 'grid').lower() == 'grid':
         if 'HM' in name:
             func =  HMFunc(path)
         else:
             func =  GridFunc(path)
         func._xctype = os.path.basename(name).split('_')[0]
         return func
-    elif kwargs.get('kind', '').lower() == 'atomic':
+    elif kwargs.get('kind', 'grid').lower() == 'atomic':
         return AtomicFunc(name)
 
 

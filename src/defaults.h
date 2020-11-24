@@ -16,7 +16,7 @@ class Defaults {
       instance->edens = 1;
       instance->add = 0;
       instance->cuda = 0;
-      instance->gamma = 1;
+      instance->gamma = 0;
       return instance;
     }
     void setDefault(const int code);
