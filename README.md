@@ -1,5 +1,4 @@
 # Lib**n**xc
-=========================
 
 Libnxc is a libary to deploy **machine learned** exchange-correlation functionals for density functional theory. 
 
@@ -33,7 +32,7 @@ To unit test the C++/Fortran implementation [GoogleTest](https://github.com/goog
 
 The functionality of Libnxc may be best explained by an example
 
-```
+```C++
 #include "nxc.h"
 
 int main()
@@ -74,7 +73,7 @@ Running the program above should produce the following output:
 
 The same program can be run from Fortran:
 
-```
+```Fortran
 PROGRAM test
 
       implicit none
@@ -100,7 +99,7 @@ END PROGRAM test
 
 ... and Python 
 
-```
+```python
 from pylibnxc import LibNXCFunctional
 import numpy as np
 
