@@ -137,8 +137,8 @@ def test_nn_pbe(name, funcname):
              'NO': """ 8            .000000    .000   .000
                  7            .000000    .000    1.37"""}
 
-    if name == 'NO' and funcname == 'PBE':
-        pytest.xfail("PBE (NN) correlation not reliable in spin-polarized case")
+    # if name == 'NO' and funcname == 'PBE':
+        # pytest.xfail("PBE (NN) correlation not reliable in spin-polarized case")
 
     mol = gto.Mole()
     mol.atom=a_str[name]
