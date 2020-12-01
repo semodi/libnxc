@@ -78,7 +78,8 @@ int nxc_f90_gga_exc_vxc_(int* np, double rho[], double sigma[], double exc [],
 */
 int nxc_f90_mgga_exc_vxc_(int* np, double rho[], double sigma[], double lapl[], double tau[],
    double exc [], double vrho[], double vsigma[], double vlapl[], double vtau[], int* ierr);
-}
 
 void nxc_f90_func_get_family(int * family);
+void nxc_f90_func_get_family_from_path_(char modelpath [], int * pathlen, int * family);
+}
 #endif

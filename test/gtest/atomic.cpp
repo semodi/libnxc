@@ -36,9 +36,8 @@ double run_model(int *myBox, bool cuda){
     int ns = 1;
     int edens = 0;
 
-    nxc_set_code(SIESTA_CODE);
+    nxc_set_code(SIESTA_ATOMIC_CODE);
     if (cuda){
-      // func_param fp = {pos, nua, cell, grid, isa, symbols, ns, myBox, edens, 1, 1};
       func_param fp = {pos, nua, cell, grid, isa, symbols, ns, myBox};
       fp.cuda=1;
       nxc_func_init(&p, "../test.cuda.jit", fp);
@@ -53,7 +52,7 @@ double run_model(int *myBox, bool cuda){
     }
     double rho[1000] = {0.1};
     double Exc[1] = {0};
-    double vrho[1000];
+    double vrho[1000] = {0};
     nxc_lda_exc_vxc(&p, np, rho, Exc, vrho);
     return Exc[0];
 }

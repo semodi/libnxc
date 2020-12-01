@@ -57,4 +57,9 @@ void nxc_f90_func_get_family_(int * family){
     *family = -1;
   }
 }
+void nxc_f90_func_get_family_from_path_(char modelpath [], int * pathlen, int * family){
+  std::string modeldir(modelpath);
+  modeldir = modeldir.erase(*pathlen, std::string::npos);
+  *family = nxc_func_get_family_from_path(modeldir);
+}
 }
