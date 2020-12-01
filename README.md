@@ -64,11 +64,11 @@ int main()
 
 Running the program above should produce the following output:
 ```
-0.1     -0.459795
-0.2     -0.507272
-0.3     -0.562437
-0.4     -0.611048
-0.5     -0.653416
+0.100000   -.459787
+0.200000   -.507308
+0.300000   -.562453
+0.400000   -.611107
+0.500000   -.653520
 ```
 
 The same program can be run from Fortran:
