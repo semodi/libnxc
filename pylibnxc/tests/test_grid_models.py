@@ -1,7 +1,9 @@
 from pylibnxc import LibNXCFunctional
 import pytest
 import numpy as np
+import os
 
+test_dir = os.path.dirname(os.path.abspath(__file__))
 def test_pbe():
     func = LibNXCFunctional("GGA_PBE")
     rho = np.array([0.1, 0.2, 0.3, 0.4, 0.5])
@@ -14,7 +16,7 @@ def test_pbe():
 
     stacked = np.stack([inp['rho']] + [results[key] for key in results])
     # np.save('pbe_expected_output.npy',stacked)
-    assert np.allclose(np.load('pbe_expected_output.npy'), stacked)
+    assert np.allclose(np.load(test_dir  + '/pbe_expected_output.npy'), stacked)
 
 def test_pbe_gamma():
     func = LibNXCFunctional("GGA_PBE")
@@ -32,7 +34,7 @@ def test_pbe_gamma():
     vsigma = vgamma/(2*gamma)
     results['vgamma'] = vsigma[0,:]
     stacked = np.stack([inp['rho']] + [results[key] for key in results])
-    reference = np.load('pbe_expected_output.npy')
+    reference = np.load(test_dir + '/pbe_expected_output.npy')
 
     for idx, (st,ref) in enumerate(zip(stacked, reference)):
         assert np.allclose(st, ref)
