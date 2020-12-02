@@ -59,12 +59,6 @@ class GridFunc(NXCFunctional):
 
     def compute(self, inp, do_exc=True, do_vxc=True, **kwargs):
 
-        sigma_grad={}
-        def save_grad(name):
-            def hook(grad):
-                sigma_grad[name] = grad.detach().numpy().T
-            return hook
-
         spin = (inp['rho'].ndim == 2)
         inputs = []
         rho0 = torch.from_numpy(inp['rho'])
@@ -98,13 +92,13 @@ class GridFunc(NXCFunctional):
         if spin:
             rho0_a = rho0[0]
             rho0_b = rho0[1]
-            if 'sigma' in inp:
+            if 'sigma' in inp and not gamma in inp:
                 sigma_a, sigma_ab, sigma_b = drho + self._gamma_eps
             if 'tau' in inp:
                 tau_a, tau_b = tau
         else:
             rho0_a = rho0_b = rho0*0.5
-            if 'sigma' in inp:
+            if 'sigma' in inp and not 'gamma' in inp:
                 sigma_a=sigma_b=sigma_ab= drho*0.25 + self._gamma_eps
             if 'tau' in inp:
                 tau_a = tau_b = tau*0.5
@@ -127,10 +121,6 @@ class GridFunc(NXCFunctional):
         E = torch.dot(exc, torch_inputs[:, 0] + torch_inputs[:, 1])
 
         if do_vxc:
-            if 'gamma' in inp:
-                sigma_a.register_hook(save_grad('a'))
-                sigma_ab.register_hook(save_grad('ab'))
-                sigma_b.register_hook(save_grad('b'))
             E.backward()
         exc = exc.detach().numpy()
 
@@ -142,12 +132,7 @@ class GridFunc(NXCFunctional):
             if 'sigma' in inp:
                 outputs['vsigma'] = drho.grad.detach().numpy().T
             elif 'gamma' in inp:
-                outputs['vgamma'] = drho.grad.detach().numpy().T
-                outputs['vsigma'] = np.stack([sigma_grad['a'],
-                                              sigma_grad['ab'],
-                                              sigma_grad['b']], axis=0).T
-                if not spin:
-                    outputs['vsigma'] = outputs['vsigma'][:,0]
+                outputs['vgamma'] = drho.grad.detach().numpy()
             if 'tau' in inp:
                 outputs['vtau'] = tau.grad.detach().numpy().T
 
