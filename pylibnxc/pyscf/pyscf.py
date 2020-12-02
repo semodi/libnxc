@@ -2,6 +2,7 @@ from pyscf import dft
 from pyscf.lib.numpy_helper import NPArrayWithTag
 from ..adapters import PySCFNXC, NXCAdapter, get_nxc_adapter
 from ..functional import AtomicFunc, GridFunc, HMFunc, LibNXCFunctional
+from .utils import parse_xc_code, find_max_level
 import numpy as np
 import os
 from functools import partial
@@ -16,8 +17,9 @@ def KS(mol, method, nxc='', nxc_kind='grid', **kwargs):
             model = get_nxc_adapter('pyscf', nxc)
             mf.get_veff = veff_mod_atomic(mf, model)
         elif nxc_kind.lower() == 'grid':
-            dft.libxc.define_xc_(mf._numint, eval_xc,
-                os.path.basename(nxc).split('_')[0])
+            parsed_xc = parse_xc_code(nxc)
+            dft.libxc.define_xc_(mf._numint, eval_xc, find_max_level(parsed_xc),
+                hyb=parsed_xc[0][0])
             mf.xc = nxc
         else:
             raise ValueError("{} not a valid nxc_kind. Valid options are 'atomic' or 'grid'".format(nxc_kind))
@@ -60,14 +62,20 @@ def eval_xc(xc_code, rho, spin=0, relativity=0, deriv=1, verbose=None):
             inp['lapl'] = np.stack([rho_a[4],rho_b[4]])
             inp['tau'] = np.stack([rho_a[5],rho_b[5]])
 
-    model = LibNXCFunctional(xc_code, kind='grid')
-    output = model.compute(inp)
+    parsed_xc = parse_xc_code(xc_code)
+    total_output = {'v' + key: 0.0 for key in inp}
+    total_output['zk'] = 0
 
-    exc = output.get('zk', None)
-    vlapl = output.get('vlapl', None)
-    vtau = output.get('vtau', None)
-    vrho = output.get('vrho', None)
-    vsigma = output.get('vsigma', None)
+    for code, factor in parsed_xc[1]:
+        model = LibNXCFunctional(code, kind='grid')
+        output = model.compute(inp)
+        for key in output:
+            if output[key] is not None:
+                total_output[key] += output[key]*factor
+
+    exc, vlapl, vtau, vrho, vsigma = [total_output.get(key,None)\
+      for key in ['zk','vlapl','vtau','vrho','vsigma']]
+
     vxc = (vrho, vsigma, vlapl, vtau)
     fxc = None  # 2nd order functional derivative
     kxc = None  # 3rd order functional derivative

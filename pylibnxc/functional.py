@@ -92,7 +92,7 @@ class GridFunc(NXCFunctional):
         if spin:
             rho0_a = rho0[0]
             rho0_b = rho0[1]
-            if 'sigma' in inp and not gamma in inp:
+            if 'sigma' in inp and not 'gamma' in inp:
                 sigma_a, sigma_ab, sigma_b = drho + self._gamma_eps
             if 'tau' in inp:
                 tau_a, tau_b = tau
