@@ -62,13 +62,16 @@ def eval_xc(xc_code, rho, spin=0, relativity=0, deriv=1, verbose=None):
 
     model = LibNXCFunctional(xc_code, kind='grid')
     output = model.compute(inp)
-
+    
+    
+        
     exc = output.get('zk', None)
-    vlapl = output.get('vlapl', None)
-    vtau = output.get('vtau', None)
-    vrho = output.get('vrho', None)
-    vgamma = output.get('vsigma', None)
+    vlapl = np.nan_to_num(output.get('vlapl', None), copy=False)
+    vtau = np.nan_to_num(output.get('vtau', None), copy=False)
+    vrho = np.nan_to_num(output.get('vrho', None), copy=False)
+    vgamma = np.nan_to_num(output.get('vsigma', None),copy=False)
     vxc = (vrho, vgamma, vlapl, vtau)
+        
     fxc = None  # 2nd order functional derivative
     kxc = None  # 3rd order functional derivative
     return exc, vxc, fxc, kxc
