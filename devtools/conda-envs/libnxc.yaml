@@ -1,0 +1,15 @@
+name: libnxc
+channels:
+  - pytorch
+  - defaults
+  - conda-forge
+dependencies:
+  - pip
+  - pytorch=1.7.0
+  - cpuonly
+  - pytest
+  - pip:
+    - codecov 
+    - pyscf
+
+

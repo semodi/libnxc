@@ -10,6 +10,19 @@ except ModuleNotFoundError:
 
 test_dir = os.path.dirname(os.path.abspath(__file__))
 
+
+@pytest.mark.skipif(not pyscf_found, reason='requires pyscf')
+def test_parse():
+    parsed = pylibnxc.pyscf.utils.parse_xc_code('GGA_X_PBEd')
+    assert parsed == ([0, 0, 0], [('GGA_X_PBED', 1)])
+    parsed = pylibnxc.pyscf.utils.parse_xc_code('GGA_C_PBEd')
+    assert parsed == ([0, 0, 0], [('GGA_C_PBED', 1)])
+    parsed = pylibnxc.pyscf.utils.parse_xc_code('GGA_X_PBEd, GGA_C_PBEd')
+    assert parsed == ([0, 0, 0], [('GGA_X_PBED', 1), ('GGA_C_PBED', 1)])
+    parsed = pylibnxc.pyscf.utils.parse_xc_code('0.5*GGA_X_PBEd + 0.75*MGGA_X_PBExx, GGA_C_PBEd + 0.5*HF')
+    assert parsed == ([0.5, 0, 0], [('GGA_X_PBED', 0.5), ('MGGA_X_PBEXX', 0.75), ('GGA_C_PBED', 1)])
+    assert pylibnxc.pyscf.utils.find_max_level(parsed) == 'MGGA'
+
 @pytest.mark.skipif(not pyscf_found, reason='requires pyscf')
 def test_pyscf():
     """ Simply test whether pyscf is working and giving the correct energies
@@ -42,9 +55,14 @@ def test_atomic():
 
 @pytest.mark.skipif(not pyscf_found, reason='requires pyscf')
 @pytest.mark.parametrize('polarized',[False,True])
-def test_hm_lda(polarized):
+@pytest.mark.parametrize('func',["LDA","GGA","MGGA"])
+def test_hm(polarized, func):
     from pyscf import gto, dft
-    nxc_path = 'LDA_HM'
+    nxc_path = func + '_HM'
+    reference_values = {'LDA':(-7.29179794380983, -75.83484819708484), # These ref. values were
+                        'GGA':(-7.42384149356207, -76.1038744376732),  # obtained with the original implementation
+                        'MGGA':(-7.46823966797756, -76.1998027485784)}[func] # by Nagai et al.
+
     mol = gto.Mole()
     if polarized:
         mol.atom=""" 3 0 0 0"""
@@ -60,65 +78,11 @@ def test_hm_lda(polarized):
     if polarized:
         mf = pylibnxc.pyscf.UKS(mol, nxc=nxc_path)
         mf.kernel()
-        assert np.allclose(mf.e_tot,  -7.29179794380983)
+        assert np.allclose(mf.e_tot,  reference_values[0])
     else:
         mf = pylibnxc.pyscf.RKS(mol, nxc=nxc_path)
         mf.kernel()
-        assert np.allclose(mf.e_tot, -75.83484819708484)
-
-@pytest.mark.skipif(not pyscf_found, reason='requires pyscf')
-@pytest.mark.parametrize('polarized',[False,True])
-def test_hm_gga(polarized):
-    from pyscf import gto, dft
-    nxc_path = 'GGA_HM'
-    mol = gto.Mole()
-    if polarized:
-        mol.atom=""" 3 0 0 0"""
-        mol.spin = 1
-    else:
-        mol.atom="""8            .000000     .000000     .119262
-        1            .000000     .763239    -.477047
-        1            .000000    -.763239    -.477047"""
-        mol.spin  =0
-    mol.charge=0
-    mol.verbose=4
-    mol.basis = "6-31G"
-    mol.build()
-    if polarized:
-        mf = pylibnxc.pyscf.UKS(mol, nxc=nxc_path)
-        mf.kernel()
-        assert np.allclose(mf.e_tot, -7.42384149356207)
-    else:
-        mf = pylibnxc.pyscf.RKS(mol, nxc=nxc_path)
-        mf.kernel()
-        assert np.allclose(mf.e_tot, -76.1038744376732)
-
-
-@pytest.mark.skipif(not pyscf_found, reason='requires pyscf')
-@pytest.mark.parametrize('polarized',[False,True])
-def test_hm_mgga(polarized):
-    from pyscf import gto, dft
-    nxc_path = 'MGGA_HM'
-    mol = gto.Mole()
-    if polarized:
-        mol.atom=""" 3 0 0 0"""
-        mol.spin = 1
-    else:
-        mol.atom="""8            .000000     .000000     .119262
-        1            .000000     .763239    -.477047
-        1            .000000    -.763239    -.477047"""
-        mol.spin  =0
-    mol.charge=0
-    mol.basis = "6-31G"
-    mol.build()
-    if polarized:
-        mf = pylibnxc.pyscf.UKS(mol, nxc=nxc_path)
-        mf.kernel()
-        assert np.allclose(mf.e_tot, -7.46823966797756)
-    else:
-        mf = pylibnxc.pyscf.RKS(mol, nxc=nxc_path)
-        mf.kernel()
-        assert np.allclose(mf.e_tot, -76.1998027485784)
+        assert np.allclose(mf.e_tot, reference_values[1])
 
 @pytest.mark.skipif(not pyscf_found, reason='requires pyscf')
 @pytest.mark.parametrize('name',['H2','LiF','NO'])
@@ -127,7 +91,9 @@ def test_nn_pbe(name, funcname):
     from pyscf import gto, dft
     # nxc_path = 'PBE_GGA'
     func = {'PBE_X':['GGA_X_PBE', 'GGA_X_PBE'],
-            'PBE': ['GGA_PBE', 'PBE']}[funcname]
+            'PBE': ['GGA_PBE', 'PBE'],
+            'PBE_comp': ['GGA_X_PBE, GGA_C_PBE','PBE'],
+            'PBE0': ['0.75*GGA_X_PBE+0.25*HF,GGA_C_PBE','PBE0']}[funcname]
     nxc_path = func[0]
 
     a_str = {'H2': """ 1            .000000    .000   -.377
@@ -137,14 +103,14 @@ def test_nn_pbe(name, funcname):
              'NO': """ 8            .000000    .000   .000
                  7            .000000    .000    1.37"""}
 
-    if name == 'NO' and funcname == 'PBE':
-        pytest.xfail("PBE (NN) correlation not reliable in spin-polarized case")
+    # if name == 'NO' and funcname == 'PBE':
+        # pytest.xfail("PBE (NN) correlation not reliable in spin-polarized case")
 
     mol = gto.Mole()
     mol.atom=a_str[name]
     mol.spin  =0
     if name == 'NO':
-        mol.spin = 3
+        mol.spin = 1
     mol.charge=0
     mol.basis = "6-311+G*"
     mol.build()
@@ -155,7 +121,7 @@ def test_nn_pbe(name, funcname):
         methods =methods[-1:]
     for method in methods:
         mf = method(mol, nxc=nxc_path)
-        mf.grids.level = 4
+        mf.grids.level = 6
         mf.kernel()
         results.append(mf.e_tot)
     assert all([np.allclose(r, results[-1]) for r in results])
@@ -166,7 +132,13 @@ def test_nn_pbe(name, funcname):
     else:
         mf = dft.UKS(mol)
     mf.xc = func[1]
-    mf.grids.level = 4
+    mf.grids.level = 6
     mf.kernel()
     pbe_etot = mf.e_tot
-    assert np.allclose(pbe_etot, nn_etot, atol=1e-3)
+    assert np.allclose(pbe_etot, nn_etot, atol=1e-4)
+
+@pytest.mark.skipif(not pyscf_found, reason='requires pyscf')
+@pytest.mark.parametrize('name',['H2','LiF','NO'])
+@pytest.mark.parametrize('funcname',['PBE_comp','PBE0'])
+def test_nn_pbe_composite(name, funcname):
+    test_nn_pbe(name, funcname)

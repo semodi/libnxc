@@ -143,5 +143,6 @@ void nxc_mgga_exc_vxc(nxc_func_type* p, int np, double rho[],double sigma[], dou
 int nxc_cuda_available();
 
 int nxc_func_get_family(nxc_func_type* p);
+int nxc_func_get_family_from_path(std::string model);
 
 #endif

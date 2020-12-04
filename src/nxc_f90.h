@@ -15,9 +15,10 @@ nxc_func_type nxc_func;
 void nxc_f90_set_code_(int * code);
 void nxc_f90_use_cuda_();
 
-int nxc_f90_func_init_(double  pos[], int * nua, double  cell[], int  grid[], int isa[],
-            char symbols[], int * ns, int * ierr, char  modelpath[], int * pathlen, int myBox[]);
+int nxc_f90_atmfunc_init_(double  pos[], int * nua, double  cell[], int  grid[], int isa[],
+            char symbols[], int * ns, char  modelpath[], int * pathlen, int myBox[], int* ierr);
 
+int nxc_f90_func_init_(char  modelpath[], int * pathlen, int * ierr);
 
 /**
 * Evaluates the functional on provided density if functional is LDA type. This includes atomic functionals
@@ -77,7 +78,8 @@ int nxc_f90_gga_exc_vxc_(int* np, double rho[], double sigma[], double exc [],
 */
 int nxc_f90_mgga_exc_vxc_(int* np, double rho[], double sigma[], double lapl[], double tau[],
    double exc [], double vrho[], double vsigma[], double vlapl[], double vtau[], int* ierr);
-}
 
 void nxc_f90_func_get_family(int * family);
+void nxc_f90_func_get_family_from_path_(char modelpath [], int * pathlen, int * family);
+}
 #endif

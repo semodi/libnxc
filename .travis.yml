@@ -1,0 +1,49 @@
+language: python
+
+# Run jobs on container-based infrastructure, can be overridden per job
+
+matrix:
+  include:
+    - os: osx
+      language: generic
+      env: PYTHON_VER=3.8
+
+    - os: linux
+      language: generic
+      env: PYTHON_VER=3.8
+
+addons:
+  apt:
+    sources:
+      - ubuntu-toolchain-r-test
+
+before_install:
+    # Additional info about the build
+  - uname -a
+  - df -h
+  - ulimit -a
+    # Install the Python environment
+  - source devtools/travis-ci/before_install.sh
+  - python -V
+
+install:
+
+    # Create test environment for package
+    #  - python devtools/scripts/create_conda_env.py -n=test -p=$PYTHON_VER devtools/conda-envs/test_env.yaml
+  - conda update conda
+    #  - conda install anaconda=5.2
+  - conda env create -f devtools/conda-envs/libnxc.yaml
+    # Activate the test environment
+  - conda activate libnxc
+    # Build and install package
+  - pip install -e .
+
+
+
+script:
+  - pytest -v  pylibnxc/tests/
+
+notifications:
+    email: false
+
+after_success:

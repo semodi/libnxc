@@ -2,7 +2,8 @@
 #define DEFAULTS_H
 
 const int DEFAULT_CODE=0;
-const int SIESTA_CODE=1;
+const int SIESTA_GRID_CODE=1;
+const int SIESTA_ATOMIC_CODE=2;
 const int CP2K_CODE=0;
 
 class Defaults {
@@ -16,7 +17,7 @@ class Defaults {
       instance->edens = 1;
       instance->add = 0;
       instance->cuda = 0;
-      instance->gamma = 1;
+      instance->gamma = 0;
       return instance;
     }
     void setDefault(const int code);

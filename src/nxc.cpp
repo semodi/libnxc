@@ -49,3 +49,8 @@ void nxc_use_cuda(){
 int nxc_func_get_family(nxc_func_type* p){
   return p->func->get_family();
 }
+
+int nxc_func_get_family_from_path(std::string model){
+  std::shared_ptr<NXCFunc> f = get_functional(model);
+  return f->get_family();
+}
