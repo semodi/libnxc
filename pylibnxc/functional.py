@@ -45,7 +45,7 @@ class NXCFunctional(ABC):
             raise Exception('Model not found at {}, please check if path correct'.format(path))
         self.energy_model =\
                  torch.jit.load(path + '/xc')
-
+        self.safe_mode = True
     def initialize(self):
         pass
 
@@ -136,6 +136,9 @@ class GridFunc(NXCFunctional):
             if 'tau' in inp:
                 outputs['vtau'] = tau.grad.detach().numpy().T
 
+        if self.safe_mode:
+            for key in outputs:
+                outputs[key] = np.nan_to_num(outputs[key], copy=False)
         return outputs
 
 class HMFunc(GridFunc):
