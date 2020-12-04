@@ -151,31 +151,31 @@ struct func_param{
 };
 ```
 
-The struct func_param is used to set parameters that relate to the system that is being
+The struct `func_param` is used to set parameters that relate to the system that is being
 simulated as well as the way Libnxc communicates with the electronic structure code.
-Parameters `pos` to `myBox` are only relevant for atomic functionals (NeuralXC), and contain information
+Parameters `pos` to `myBox` are only relevant for atomic functionals (NeuralXC) and contain information
 about the simulation box (unit cell) as well as the atomic positions and species.
 `isa` together with `symbols` defines the element of every atom which is relevant if the NeuralXC
 functional is species dependent.
 Example:
 ```c++
-int * isa = {2,1,1}
+int * isa = {1,0,0}
 char * symbols = {'H','O'}
 ```
 would be interpreted as one oxygen atoms and two hydrogen atoms {'O','H','H'}.
 
 The remaining parameters govern the evaluation of the functional:
 - `eden`:
-  {`1`: return the energy per unit particle on a grid, (default)
+  {`1`: return the energy per unit particle on a grid, (default),
    `0`: only return the total (xc)-energy (This was mainly implemented for performance reasons)}
 - `add`:
   {`1`: adds return values for exc and the potential terms to the provided arrays,
    `0`: sets the return values for exc and the potential terms in the provided arrays (default)}
 - `cuda`:
-  {`1`: model inference on GPUs
+  {`1`: model inference on GPUs,
    `0`: model inference on CPUs (default)}
 - `gamma`:
-  {`1`: for GGAs and higher, the gradient of the electron density is provided
+  {`1`: for GGAs and higher, the gradient of the electron density is provided,
    `0`: the reduced gradient sigma is provided (default)}
 
 The default values were chosen to closely mirror the functionality of Libxc.
@@ -202,7 +202,7 @@ const int NXC_UNPOLARIZED=1;
 *
 * @param[out] p loaded functional
 * @param[in] model string containing either model path or name
-* @param[in, optional] fp functional parameters
+* @param[in] fp functional parameters
 * @param[in, optional] nspin spin polarized/unpolarized calcuation (default NXC_UNPOLARIZED)
 */
 void nxc_func_init(nxc_func_type* p, std::string model, func_param fp, int nspin=NXC_UNPOLARIZED);
@@ -233,10 +233,10 @@ The arguments are defined in the same way as for Libxc with the notable exceptio
 sigma (and accordingly vsigma) can either be the reduced gradient or the gradient of the
 density (and the corresponding potential term) depending on the parameter `gamma` in the `func_param` struct.
 
-NeuralXC functionals require special treatment as their dependency on localized atomic orbitals produces additional
+NeuralXC functionals require special treatment, as their dependency on localized atomic orbitals produces additional
 terms when evaluating forces and stress. These corrections can be obtained with the method `nxc_lda_exc_vxc_fs`, which
 should be called as the last step at the end of a converged SCF calcuation. When forces and stress aren't required
-(e.g. during the SCF loop) it sufficis to call `nxc_lda_exc_vxc` to evaluate the NeuralXC functional.
+(e.g. during the SCF loop) it suffices to call `nxc_lda_exc_vxc` to evaluate the NeuralXC functional.
 
 
 ### Other methods
@@ -256,7 +256,7 @@ const int ATOMIC_TYPE=4;
 int nxc_func_get_family(nxc_func_type* p);
 int nxc_func_get_family_from_path(std::string model);
 ```
-We provide to methods to check the type of a functional depending on whether the functional
+We provide two methods to check the type of a functional depending on whether the functional
 has already been loaded an initialized (`nxc_func_get_family`) or whether we want to
 check the functional type without loading it (`nxc_func_get_family_from_path`)
 
