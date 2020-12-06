@@ -93,7 +93,8 @@ def test_nn_pbe(name, funcname):
     func = {'PBE_X':['GGA_X_PBE', 'GGA_X_PBE'],
             'PBE': ['GGA_PBE', 'PBE'],
             'PBE_comp': ['GGA_X_PBE, GGA_C_PBE','PBE'],
-            'PBE0': ['0.75*GGA_X_PBE+0.25*HF,GGA_C_PBE','PBE0']}[funcname]
+            'PBE0': ['0.75*GGA_X_PBE+0.25*HF,GGA_C_PBE','PBE0'],
+            'SCAN': ['MGGA_SCAN','SCAN']}[funcname]
     nxc_path = func[0]
 
     a_str = {'H2': """ 1            .000000    .000   -.377
@@ -141,4 +142,10 @@ def test_nn_pbe(name, funcname):
 @pytest.mark.parametrize('name',['H2','LiF','NO'])
 @pytest.mark.parametrize('funcname',['PBE_comp','PBE0'])
 def test_nn_pbe_composite(name, funcname):
+    test_nn_pbe(name, funcname)
+
+@pytest.mark.skipif(not pyscf_found, reason='requires pyscf')
+@pytest.mark.parametrize('name',['LiF','NO'])
+@pytest.mark.parametrize('funcname',['SCAN'])
+def test_nn_scan(name, funcname):
     test_nn_pbe(name, funcname)
