@@ -10,6 +10,25 @@ Libnxc is inspired by Libxc, mirroring as closely  as possible its API. In doing
 
 Libnxc can utilize multi-processing through MPI and model inference on GPUs through CUDA is supported as well.
 
+Table of Contents
+=================
+
+   * [Lib<strong>n</strong>xc](#libnxc)
+      * [Dependencies](#dependencies)
+      * [Quickstart](#quickstart)
+      * [Using Pylibnxc with PySCF](#using-pylibnxc-with-pyscf)
+      * [C++ Interface](#c-interface)
+         * [Functional parameters](#functional-parameters)
+         * [Initializing the functional](#initializing-the-functional)
+         * [Model evaluation](#model-evaluation)
+         * [Other methods](#other-methods)
+      * [Fortran Interface](#fortran-interface)
+      * [pylibnxc](#pylibnxc)
+         * [Loading a model](#loading-a-model)
+         * [Initializing a model](#initializing-a-model)
+         * [Evaluating a model](#evaluating-a-model)
+      * [Shipped functionals](#shipped-functionals)
+
 ## Dependencies
 
 Libnxc depends on PyTorch. The C++/Fortran implementation requires that libtorch is made available at compile time, pylibnxc depends on pytorch.
@@ -118,9 +137,9 @@ if __name__ == '__main__':
     print(np.stack([inp['rho'], np.round(results['zk'],6)],axis=-1))
 ```
 
-## Using pylibnxc with PySCF
+## Using Pylibnxc with PySCF
 
-Using pylibnxc in PySCF is as simple as changing two lines of code:
+Using Pylibnxc in PySCF is as simple as changing two lines of code:
 
 Starting from
 ```python
@@ -142,7 +161,7 @@ mf = RKS(mol, nxc='GGA_PBE', nxc_kind='grid')
 mf.kernel()
 ```
 The second version would run a SCF calculation using our machine-learned version of
-PBE (see Shipped Models).
+PBE (see [Shipped functionals](#shipped-functionals).
 
 For unrestricted Kohn-Sham calculations `pylibnxc.pyscf.UKS` is available as well.
 The `nxc` keyword supports mixing of functionals similar to pyscf, e.g.
@@ -369,7 +388,7 @@ def initialize(self, **kwargs):
     ------------------
     grid_coords, numpy.ndarray (Ngrid,3)
     	Grid point coordinates (in a.u.)
-    grid_weights, numpy.ndarray (Nweights,)
+    grid_weights, numpy.ndarray (Ngrid,)
     	Grid point weights for integration
     positions, numpy.ndarray (N, 3)
     	atomic positions
@@ -407,13 +426,13 @@ def compute(self, inp, do_exc=True, do_vxc=True, **kwargs):
     """
 ```
 
-If the functional type is atomic two additional keyword arguments can be provided:
+If the functional type is "atomic" two additional keyword arguments can be provided:
   - `do_forces`: bool, Compute the pulay force corrections. The output dict will then
   contain an entry named `'forces'`.
   - `edens`: bool, Return energy per unit particle if `True`, total energy otherwise
 In this case, instead of providing the electron density as `'rho'` the projected density
 or ML-descriptors can be provided as `'c'` in which case the density projection step
-is skipped but force corrections are not available. This might make sense for
+is skipped but force corrections are not available. This might save resources for
 codes for which analytical integrals over orbitals are available.
 
 
