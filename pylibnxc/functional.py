@@ -14,7 +14,20 @@ from abc import ABC, abstractmethod
 _default_modelpath = os.path.dirname(__file__) + '/../models/'
 
 def LibNXCFunctional(name, **kwargs):
+    """ Loads a Libnxc functional
+    Parameters
+    ----------
+    name, string
+        Either the name of a pre-defined functional or path to custom
+        functional (will check path first and then resort to pre-defined functional)
+    kind, string, optional {'grid', 'atomic'}
+        default: 'grid', whether functional is grid kind (LDA, GGA etc.) or
+        atomic (NeuralXC)
 
+    Returns
+    --------
+    NXCFunctional
+    """
     #Resolve path
     model_path = os.environ.get('NXC_MODELPATH', _default_modelpath)
 
@@ -58,6 +71,27 @@ class GridFunc(NXCFunctional):
     # _gamma_eps = 0
 
     def compute(self, inp, do_exc=True, do_vxc=True, **kwargs):
+        """ Evaluate the functional on a given input
+
+        Parameters
+        ----------
+        inp, dict of np.ndarrays
+            Input electron density "rho" and its derivatives. Potential terms are
+            calculated for all provided derivates.
+        do_exc, bool, optional
+            no effect, only here for compatibility reasons
+        do_vxc, bool, optional
+            whether to compute the functional derivative(s) of the energy.
+            default: True
+
+        Returns:
+        ---------
+        output, dict
+            Dictionary containing output values:
+                - 'zk': energy per unit particle or total energy
+                - 'vrho/vsigma/vtau' : potential terms
+        """
+
 
         spin = (inp['rho'].ndim == 2)
         inputs = []
@@ -191,8 +225,11 @@ class AtomicFunc(NXCFunctional):
         	atomic species (chem. symbols)
         """
         self.projector_kwargs = kwargs
-        periodic = (kwargs['unitcell'].shape == (3,3)) #TODO: this is just a workaround
-        self.unitcell = torch.from_numpy(kwargs['unitcell']).double()
+        periodic = 'unitcell' in kwargs
+        if periodic:
+            self.unitcell = torch.from_numpy(kwargs['unitcell']).double()
+        else:
+            self.unitcell = torch.from_numpy(kwargs['grid_coords']).double()
         # self.unitcell_inv = torch.inverse(self.unitcell).detach().numpy()
         self.epsilon = torch.zeros([3,3]).double()
         self.epsilon.requires_grad = True
@@ -201,7 +238,11 @@ class AtomicFunc(NXCFunctional):
             self.unitcell_we = torch.mm((torch.eye(3) + self.epsilon), self.unitcell)
         else:
             self.unitcell_we = self.unitcell
-        self.grid = torch.from_numpy(kwargs['grid']).double()
+        if periodic:
+            self.grid = torch.from_numpy(kwargs['grid']).double()
+        else:
+            self.grid = torch.from_numpy(kwargs['grid_weights']).double()
+
         self.positions = torch.from_numpy(kwargs['positions']).double()
         self.positions_we = torch.mm(torch.eye(3) + self.epsilon, self.positions.T).T
         # self.positions = torch.mm(self.positions_scaled,self.unitcell)
@@ -266,6 +307,35 @@ class AtomicFunc(NXCFunctional):
             return output
 
     def compute(self, inp, do_exc=True, do_vxc=True, do_forces=False, edens=True):
+        """ Evaluate the functional on a given input
+
+        Parameters
+        ----------
+        inp, dict of np.ndarrays
+            Input electron density "rho" or ML descriptors "c". If "c" is provided
+            projecting the electron density is skipped and _compute_from_descriptors
+            is called directly.
+        do_exc, bool, optional
+            no effect, only here for compatibility reasons
+        do_vxc, bool, optional
+            whether to compute the functional derivative(s) of the energy.
+            default: True
+        do_forces, bool, optional
+            whether to compute pulay corrections to forces. Only possible
+            if electron density and not descriptors provided. default: False
+        edens: bool, optional
+            whether to return the energy per unit particle or the total energy,
+            default: True
+
+        Returns:
+        ---------
+        output, dict
+            Dictionary containing output values:
+                - 'zk': energy per unit particle or total energy
+                - 'vrho/vsigma/vtau' : potential terms
+                - 'forces': force corrections
+        """
+
 
         if isinstance(inp, np.ndarray):
             inp = {"rho": np.asarray(inp, dtype=np.double)}

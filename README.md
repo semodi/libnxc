@@ -118,7 +118,39 @@ if __name__ == '__main__':
     print(np.stack([inp['rho'], np.round(results['zk'],6)],axis=-1))
 ```
 
-## Interface
+## Using pylibnxc with PySCF
+
+Using pylibnxc in PySCF is as simple as changing two lines of code:
+
+Starting from
+```python
+from pyscf import gto
+from pyscf.dft import RKS
+
+mol = gto.M(atom='H 0 0 0; H 0 0 0.7', basis='6-311G')
+mf = RKS(mol)
+mf.xc = 'PBE'
+mf.kernel()
+```
+one can use pylibnxc
+```python
+from pyscf import gto
+from pylibnxc.pyscf import RKS
+
+mol = gto.M(atom='H 0 0 0; H 0 0 0.7', basis='6-311G')
+mf = RKS(mol, nxc='GGA_PBE', nxc_kind='grid')
+mf.kernel()
+```
+The second version would run a SCF calculation using our machine-learned version of
+PBE (see Shipped Models).
+
+For unrestricted Kohn-Sham calculations `pylibnxc.pyscf.UKS` is available as well.
+The `nxc` keyword supports mixing of functionals similar to pyscf, e.g.
+`nxc ='0.25*HF + 0.75*GGA_X_PBE, GGA_C_PBE'` would correspond to a neural network version
+of PBE0.
+Currently, mixing of libxc functionals with libnxc functionals is not supported.
+
+## C++ Interface
 
 ### Functional parameters
 ```c++
@@ -238,7 +270,6 @@ terms when evaluating forces and stress. These corrections can be obtained with 
 should be called as the last step at the end of a converged SCF calcuation. When forces and stress aren't required
 (e.g. during the SCF loop) it suffices to call `nxc_lda_exc_vxc` to evaluate the NeuralXC functional.
 
-
 ### Other methods
 ```c++
 /**
@@ -257,8 +288,134 @@ int nxc_func_get_family(nxc_func_type* p);
 int nxc_func_get_family_from_path(std::string model);
 ```
 We provide two methods to check the type of a functional depending on whether the functional
-has already been loaded an initialized (`nxc_func_get_family`) or whether we want to
+has already been loaded and initialized (`nxc_func_get_family`) or whether we want to
 check the functional type without loading it (`nxc_func_get_family_from_path`)
+
+
+## Fortran Interface
+The nomenclature used here strictly follows that of the C++ interface with the addition of
+`_f90` in the function names. Function signatures reflect the fact that values cannot be returned to Fortran.
+To Initialize functionals from fortran, two methods are availabl:
+ - `nxc_f90_func_init_` to initialize grid based functionals (LDA, GGA, ...) for which
+ only the model name/path has to be provided.
+ - `nxc_f90_atmfunc_init_` to initialize NeuralXC functionals for which more information about the simulation box is required.
+
+```c++
+void nxc_f90_set_code_(int * code);
+void nxc_f90_use_cuda_();
+void nxc_f90_cuda_available(int * available);
+int nxc_f90_atmfunc_init_(double  pos[], int * nua, double  cell[], int  grid[], int isa[],
+            char symbols[], int * ns, char  modelpath[], int * pathlen, int myBox[], int* ierr);
+int nxc_f90_func_init_(char  modelpath[], int * pathlen, int * ierr);
+int nxc_f90_lda_exc_vxc_(int* np, double rho[], double exc [], double vrho[], int* ierr);
+int nxc_f90_lda_exc_vxc_fs_(int* np, double rho[], double exc[], double vrho[],
+                            double forces[], double stress[], int* ierr);
+int nxc_f90_gga_exc_vxc_(int* np, double rho[], double sigma[], double exc [],
+    double vrho[], double vsigma[], int* ierr);
+int nxc_f90_mgga_exc_vxc_(int* np, double rho[], double sigma[], double lapl[], double tau[],
+   double exc [], double vrho[], double vsigma[], double vlapl[], double vtau[], int* ierr);
+void nxc_f90_func_get_family(int * family);
+void nxc_f90_func_get_family_from_path_(char modelpath [], int * pathlen, int * family);
+```
+
+The trailing underscore in the function names is required for linking purposes and
+has to be **dropped** when calling the function from fortran.
+
+## pylibnxc
+
+### Loading a model
+```python
+def LibNXCFunctional(name, **kwargs):
+    """ Loads a Libnxc functional
+    Parameters
+    ----------
+    name, string
+        Either the name of a pre-defined functional or path to custom
+        functional (will check path first and then resort to pre-defined functional)
+    kind, string, optional {'grid', 'atomic'}
+        default: 'grid', whether functional is grid kind (LDA, GGA etc.) or
+        atomic (NeuralXC)
+
+    Returns
+    --------
+    NXCFunctional
+    """
+```
+### Initializing a model
+
+If and only if the functional is of atomic (NeuralXC) kind it needs to
+be initialized before usage. Keyword arguments passed to the initialize function are used to infer whether the calculation is done in periodic boundary conditions:
+
+- Periodic boundary conditions with euclidean grid:
+```python
+def initialize(self, **kwargs):
+    """Parameters
+    ------------------
+    unitcell, numpy.ndarray (3,3)
+    	Unitcell in bohr
+    grid, numpy.ndarray (3,)
+    	Grid points per unitcell
+    positions, numpy.ndarray (Natoms, 3)
+    	atomic positions
+    species, list string (Natoms)
+    	atomic species (chem. symbols)
+    """
+```
+
+- Non-periodic boundary conditions with custom grid:
+```python
+def initialize(self, **kwargs):
+    """Parameters
+    ------------------
+    grid_coords, numpy.ndarray (Ngrid,3)
+    	Grid point coordinates (in a.u.)
+    grid_weights, numpy.ndarray (Nweights,)
+    	Grid point weights for integration
+    positions, numpy.ndarray (N, 3)
+    	atomic positions
+    species, list string (N)
+    	atomic species (chem. symbols)
+    """
+```
+
+### Evaluating a model
+
+The model can be evaluated by calling `compute` on a `LibNXCFunctional` instance:
+
+```python
+def compute(self, inp, do_exc=True, do_vxc=True, **kwargs):
+        """ Evaluate the functional on a given input
+
+        Parameters
+        ----------
+        inp, dict of np.ndarrays
+            Input electron density "rho" and its derivatives. Potential terms are
+            calculated for all provided derivates. (valid keys: 'rho','sigma',
+            'gamma','tau','lapl').
+        do_exc, bool, optional
+            no effect, only here for compatibility reasons
+        do_vxc, bool, optional
+            whether to compute the functional derivative(s) of the energy.
+            default: True
+
+        Returns:
+        ---------
+        output, dict
+            Dictionary containing output values:
+                - 'zk': energy per unit particle or total energy
+                - 'vrho/vsigma/vtau' : potential terms
+    """
+```
+
+If the functional type is atomic two additional keyword arguments can be provided:
+  - `do_forces`: bool, Compute the pulay force corrections. The output dict will then
+  contain an entry named `'forces'`.
+  - `edens`: bool, Return energy per unit particle if `True`, total energy otherwise
+In this case, instead of providing the electron density as `'rho'` the projected density
+or ML-descriptors can be provided as `'c'` in which case the density projection step
+is skipped but force corrections are not available. This might make sense for
+codes for which analytical integrals over orbitals are available.
+
 
 
 ## Shipped functionals
@@ -278,3 +435,4 @@ The following functionals are mainly included for testing purposes and should be
 
 - **GGA_PBE**: Neural Network fitted to reproduce the famous PBE functional
 - **GGA_X_PBE**: Exchange part of GGA_PBE
+- **GGA_C_PBE**: Correlation part of GGA_PBE

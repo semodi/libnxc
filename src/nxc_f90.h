@@ -6,19 +6,18 @@
 #include "nxc_func.h"
 extern "C"{
 
-const int DEFAULT_CODE_=0;
-const int SIESTA_CODE_=1;
-const int CP2K_CODE_=0;
 bool func_set=false;
 nxc_func_type nxc_func;
 
 void nxc_f90_set_code_(int * code);
 void nxc_f90_use_cuda_();
+void nxc_f90_cuda_available(int * available);
 
-int nxc_f90_atmfunc_init_(double  pos[], int * nua, double  cell[], int  grid[], int isa[],
+
+void nxc_f90_atmfunc_init_(double  pos[], int * nua, double  cell[], int  grid[], int isa[],
             char symbols[], int * ns, char  modelpath[], int * pathlen, int myBox[], int* ierr);
 
-int nxc_f90_func_init_(char  modelpath[], int * pathlen, int * ierr);
+void nxc_f90_func_init_(char  modelpath[], int * pathlen, int * ierr);
 
 /**
 * Evaluates the functional on provided density if functional is LDA type. This includes atomic functionals
@@ -30,7 +29,7 @@ int nxc_f90_func_init_(char  modelpath[], int * pathlen, int * ierr);
 * @param[(in), out] vrho dE/drho
 * @param[out] ierr
 */
-int nxc_f90_lda_exc_vxc_(int* np, double rho[], double exc [], double vrho[], int* ierr);
+void nxc_f90_lda_exc_vxc_(int* np, double rho[], double exc [], double vrho[], int* ierr);
 
 /**
 * Evaluates the functional on provided density if functional is LDA type. This includes atomic functionals
@@ -44,7 +43,7 @@ int nxc_f90_lda_exc_vxc_(int* np, double rho[], double exc [], double vrho[], in
 * @param[in, out] stress
 * @param[out] ierr
 */
-int nxc_f90_lda_exc_vxc_fs_(int* np, double rho[], double exc[], double vrho[],
+void nxc_f90_lda_exc_vxc_fs_(int* np, double rho[], double exc[], double vrho[],
                             double forces[], double stress[], int* ierr);
 
 /**
@@ -58,7 +57,7 @@ int nxc_f90_lda_exc_vxc_fs_(int* np, double rho[], double exc[], double vrho[],
 * @param[(in), out] vsigma dE/dsigma
 * @param[out] ierr
 */
-int nxc_f90_gga_exc_vxc_(int* np, double rho[], double sigma[], double exc [],
+void nxc_f90_gga_exc_vxc_(int* np, double rho[], double sigma[], double exc [],
     double vrho[], double vsigma[], int* ierr);
 
 /**
@@ -76,7 +75,7 @@ int nxc_f90_gga_exc_vxc_(int* np, double rho[], double sigma[], double exc [],
 * @param[(in), out] vtau dE/dtau
 * @param[out] ierr
 */
-int nxc_f90_mgga_exc_vxc_(int* np, double rho[], double sigma[], double lapl[], double tau[],
+void nxc_f90_mgga_exc_vxc_(int* np, double rho[], double sigma[], double lapl[], double tau[],
    double exc [], double vrho[], double vsigma[], double vlapl[], double vtau[], int* ierr);
 
 void nxc_f90_func_get_family(int * family);
