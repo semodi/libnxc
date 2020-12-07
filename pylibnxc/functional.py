@@ -13,6 +13,7 @@ from abc import ABC, abstractmethod
 
 _default_modelpath = os.path.dirname(__file__) + '/../models/'
 
+
 def LibNXCFunctional(name, **kwargs):
     """ Loads a Libnxc functional
     Parameters
@@ -37,13 +38,14 @@ def LibNXCFunctional(name, **kwargs):
     elif os.path.exists(os.path.join(model_path, name)):
         path = os.path.join(model_path, name)
     else:
-        raise ValueError('Model {} could not be found, please check name/path'.format(name))
+        raise ValueError(
+            'Model {} could not be found, please check name/path'.format(name))
 
     if kwargs.get('kind', 'grid').lower() == 'grid':
         if 'HM' in name:
-            func =  HMFunc(path)
+            func = HMFunc(path)
         else:
-            func =  GridFunc(path)
+            func = GridFunc(path)
         func._xctype = os.path.basename(name).split('_')[0]
         return func
     elif kwargs.get('kind', 'grid').lower() == 'atomic':
@@ -51,23 +53,27 @@ def LibNXCFunctional(name, **kwargs):
 
 
 class NXCFunctional(ABC):
-
     def __init__(self, path):
         path = os.path.abspath(path)
         if not os.path.exists(path):
-            raise Exception('Model not found at {}, please check if path correct'.format(path))
+            raise Exception(
+                'Model not found at {}, please check if path correct'.format(
+                    path))
         self.energy_model =\
                  torch.jit.load(path + '/xc')
         self.safe_mode = True
+
     def initialize(self):
         pass
 
     def compute(self):
         pass
 
+
 class GridFunc(NXCFunctional):
 
     _gamma_eps = 1e-8
+
     # _gamma_eps = 0
 
     def compute(self, inp, do_exc=True, do_vxc=True, **kwargs):
@@ -92,7 +98,6 @@ class GridFunc(NXCFunctional):
                 - 'vrho/vsigma/vtau' : potential terms
         """
 
-
         spin = (inp['rho'].ndim == 2)
         inputs = []
         rho0 = torch.from_numpy(inp['rho'])
@@ -107,19 +112,19 @@ class GridFunc(NXCFunctional):
                 dxa, dya, dza = drho[0, :]
                 dxb, dyb, dzb = drho[1, :]
             else:
-                dxa, dya, dza = drho*0.5
-                dxb, dyb, dzb = drho*0.5
+                dxa, dya, dza = drho * 0.5
+                dxb, dyb, dzb = drho * 0.5
 
             sigma_a = (dxa**2 + dya**2 + dza**2) + self._gamma_eps
             sigma_b = (dxb**2 + dyb**2 + dzb**2) + self._gamma_eps
-            sigma_ab = (dxb*dxa + dyb*dya + dzb*dza) + self._gamma_eps
+            sigma_ab = (dxb * dxa + dyb * dya + dzb * dza) + self._gamma_eps
             inputs.append(drho)
         if 'tau' in inp:
             tau = torch.from_numpy(inp['tau'])
             inputs.append(tau)
 
         if do_vxc:
-            for idx,_ in enumerate(inputs):
+            for idx, _ in enumerate(inputs):
                 inputs[idx].requires_grad = True
 
         torch_inputs = []
@@ -131,11 +136,11 @@ class GridFunc(NXCFunctional):
             if 'tau' in inp:
                 tau_a, tau_b = tau
         else:
-            rho0_a = rho0_b = rho0*0.5
+            rho0_a = rho0_b = rho0 * 0.5
             if 'sigma' in inp and not 'gamma' in inp:
-                sigma_a=sigma_b=sigma_ab= drho*0.25 + self._gamma_eps
+                sigma_a = sigma_b = sigma_ab = drho * 0.25 + self._gamma_eps
             if 'tau' in inp:
-                tau_a = tau_b = tau*0.5
+                tau_a = tau_b = tau * 0.5
 
         torch_inputs.append(rho0_a.unsqueeze(-1))
         torch_inputs.append(rho0_b.unsqueeze(-1))
@@ -144,13 +149,15 @@ class GridFunc(NXCFunctional):
             torch_inputs.append(sigma_ab.unsqueeze(-1))
             torch_inputs.append(sigma_b.unsqueeze(-1))
         if 'tau' in inp:
-            torch_inputs.append(torch.zeros_like(tau_a.unsqueeze(-1))) # Expects laplacian in input
-            torch_inputs.append(torch.zeros_like(tau_b.unsqueeze(-1))) # even though not used
+            torch_inputs.append(torch.zeros_like(
+                tau_a.unsqueeze(-1)))  # Expects laplacian in input
+            torch_inputs.append(torch.zeros_like(
+                tau_b.unsqueeze(-1)))  # even though not used
             torch_inputs.append(tau_a.unsqueeze(-1))
             torch_inputs.append(tau_b.unsqueeze(-1))
 
-        torch_inputs = torch.cat(torch_inputs, dim = -1)
-        exc = self.energy_model(torch_inputs)[:,0]
+        torch_inputs = torch.cat(torch_inputs, dim=-1)
+        exc = self.energy_model(torch_inputs)[:, 0]
         assert exc.dim() == 1
         E = torch.dot(exc, torch_inputs[:, 0] + torch_inputs[:, 1])
 
@@ -175,18 +182,19 @@ class GridFunc(NXCFunctional):
                 outputs[key] = np.nan_to_num(outputs[key], copy=False)
         return outputs
 
+
 class HMFunc(GridFunc):
     _gamma_eps = 1e-7
 
 
 class AtomicFunc(NXCFunctional):
-
-
     def __init__(self, path):
         path = os.path.abspath(path)
         model_paths = glob(path + '/*')
         if not os.path.exists(path):
-            raise Exception('Model not found at {}, please check if path correct'.format(path))
+            raise Exception(
+                'Model not found at {}, please check if path correct'.format(
+                    path))
 
         self.basis_models = {}
         self.projector_models = {}
@@ -199,7 +207,7 @@ class AtomicFunc(NXCFunctional):
             if 'basis' in os.path.basename(mp):
                 self.basis_models[mp.split('_')[-1]] =\
                  torch.jit.load(mp)
-            if 'projector' in  os.path.basename(mp):
+            if 'projector' in os.path.basename(mp):
                 self.projector_models[mp.split('_')[-1]] =\
                  torch.jit.load(mp)
             if 'xc' in os.path.basename(mp):
@@ -231,11 +239,12 @@ class AtomicFunc(NXCFunctional):
         else:
             self.unitcell = torch.from_numpy(kwargs['grid_coords']).double()
         # self.unitcell_inv = torch.inverse(self.unitcell).detach().numpy()
-        self.epsilon = torch.zeros([3,3]).double()
+        self.epsilon = torch.zeros([3, 3]).double()
         self.epsilon.requires_grad = True
         self.periodic = periodic
         if periodic:
-            self.unitcell_we = torch.mm((torch.eye(3) + self.epsilon), self.unitcell)
+            self.unitcell_we = torch.mm((torch.eye(3) + self.epsilon),
+                                        self.unitcell)
         else:
             self.unitcell_we = self.unitcell
         if periodic:
@@ -244,29 +253,31 @@ class AtomicFunc(NXCFunctional):
             self.grid = torch.from_numpy(kwargs['grid_weights']).double()
 
         self.positions = torch.from_numpy(kwargs['positions']).double()
-        self.positions_we = torch.mm(torch.eye(3) + self.epsilon, self.positions.T).T
+        self.positions_we = torch.mm(
+            torch.eye(3) + self.epsilon, self.positions.T).T
         # self.positions = torch.mm(self.positions_scaled,self.unitcell)
         self.species = kwargs['species']
         if self.spec_agn:
             self.species = ['X' for s in self.species]
         if periodic:
-            U = torch.einsum('ij,i->ij', self.unitcell, 1/self.grid)
+            U = torch.einsum('ij,i->ij', self.unitcell, 1 / self.grid)
             self.V_cell = torch.abs(torch.det(U))
             self.V_ucell = torch.abs(torch.det(self.unitcell)).detach().numpy()
-            self.my_box = torch.zeros([3,2])
-            self.my_box[:,1] = self.grid
+            self.my_box = torch.zeros([3, 2])
+            self.my_box[:, 1] = self.grid
         else:
             self.V_cell = self.grid
             self.V_ucell = 1
-            self.my_box = torch.zeros([3,2])
-            self.my_box[:,1] = 1
+            self.my_box = torch.zeros([3, 2])
+            self.my_box[:, 1] = 1
 
         with torch.jit.optimized_execution(should_optimize=True):
             self._compute_basis(False)
 
     def _compute_basis(self, positions_grad=False):
         self.positions.requires_grad = positions_grad
-        self.positions_we = torch.mm(torch.eye(3) + self.epsilon, self.positions.T).T
+        self.positions_we = torch.mm(
+            torch.eye(3) + self.epsilon, self.positions.T).T
         if positions_grad:
             unitcell = self.unitcell_we
             positions = self.positions_we
@@ -278,12 +289,17 @@ class AtomicFunc(NXCFunctional):
         self.angulars = []
         self.boxes = []
         for pos, spec in zip(positions, self.species):
-            rad, ang, box= self.basis_models[spec](pos, unitcell, self.grid, self.my_box)
+            rad, ang, box = self.basis_models[spec](pos, unitcell, self.grid,
+                                                    self.my_box)
             self.radials.append(rad)
             self.angulars.append(ang)
             self.boxes.append(box)
 
-    def _compute_from_descriptors(self, inp, do_exc=True, do_vxc=True, do_forces=False):
+    def _compute_from_descriptors(self,
+                                  inp,
+                                  do_exc=True,
+                                  do_vxc=True,
+                                  do_forces=False):
 
         rho = inp["c"]
         output = {}
@@ -306,7 +322,12 @@ class AtomicFunc(NXCFunctional):
 
             return output
 
-    def compute(self, inp, do_exc=True, do_vxc=True, do_forces=False, edens=True):
+    def compute(self,
+                inp,
+                do_exc=True,
+                do_vxc=True,
+                do_forces=False,
+                edens=True):
         """ Evaluate the functional on a given input
 
         Parameters
@@ -336,7 +357,6 @@ class AtomicFunc(NXCFunctional):
                 - 'forces': force corrections
         """
 
-
         if isinstance(inp, np.ndarray):
             inp = {"rho": np.asarray(inp, dtype=np.double)}
 
@@ -345,14 +365,17 @@ class AtomicFunc(NXCFunctional):
             do_forces = False
 
         if do_forces and not do_vxc:
-            raise Exception('Vxc needs to be evaluated to compute pulay force correction')
+            raise Exception(
+                'Vxc needs to be evaluated to compute pulay force correction')
         if "rho" in inp and "c" in inp:
-            raise Exception('Error: Both density "rho" and descriptors "c" provided in input.')
-
+            raise Exception(
+                'Error: Both density "rho" and descriptors "c" provided in input.'
+            )
 
         if "c" in inp:
             do_forces = False
-            return self._compute_from_descriptors(inp, do_exc, do_vxc, do_forces)
+            return self._compute_from_descriptors(inp, do_exc, do_vxc,
+                                                  do_forces)
         rho = inp["rho"]
 
         output = {}
@@ -367,7 +390,7 @@ class AtomicFunc(NXCFunctional):
         with torch.jit.optimized_execution(should_optimize=True):
             if do_forces:
                 self._compute_basis(True)
-            self.descriptors = {spec:[] for spec in self.species}
+            self.descriptors = {spec: [] for spec in self.species}
             rho = torch.from_numpy(rho).double()
             if do_vxc:
                 rho.requires_grad = True
@@ -376,31 +399,31 @@ class AtomicFunc(NXCFunctional):
                                                 self.radials, self.angulars,
                                                 self.boxes):
                 e_list.append(self.energy_models[spec](
-                    self.projector_models[spec](rho, pos,
-                                                unitcell,
-                                                self.grid,
-                                                rad, ang, box).unsqueeze(0)
-                                                )
-                                            )
+                    self.projector_models[spec](rho, pos, unitcell, self.grid,
+                                                rad, ang, box).unsqueeze(0)))
 
             E = torch.sum(torch.cat(e_list))
             if do_vxc:
                 E.backward()
-                V = (rho.grad/self.V_cell).detach().numpy()
+                V = (rho.grad / self.V_cell).detach().numpy()
                 output['vrho'] = V
                 if do_forces:
-                    forces =  np.concatenate([-self.positions.grad.detach().numpy(),
-                        self.epsilon.grad.detach().numpy()/self.V_ucell])
+                    forces = np.concatenate([
+                        -self.positions.grad.detach().numpy(),
+                        self.epsilon.grad.detach().numpy() / self.V_ucell
+                    ])
                     output['forces'] = forces
 
             E = E.detach()
             if edens:
-                qtot = torch.sum(rho*self.V_cell).detach().numpy()
+                qtot = torch.sum(rho * self.V_cell).detach().numpy()
                 if self.periodic:
-                    grid_factor = len(rho.flatten())/torch.prod(self.grid).detach().numpy()
-                    output['zk'] = E/qtot*np.ones_like(rho_np)*grid_factor
+                    grid_factor = len(rho.flatten()) / torch.prod(
+                        self.grid).detach().numpy()
+                    output['zk'] = E / qtot * np.ones_like(
+                        rho_np) * grid_factor
                 else:
-                    output['zk'] = E/self.grid/qtot/len(self.grid)
+                    output['zk'] = E / self.grid / qtot / len(self.grid)
             else:
                 output['zk'] = E
 

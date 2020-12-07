@@ -8,6 +8,7 @@ def find_in_codes(code):
         if dft.libxc.XC_CODES[key] == code:
             return key
 
+
 def parse_xc_code(xc_code):
     """ Parse pycsf style xc_code, that can contain +,*-, and combinations
     of functionals """
@@ -16,8 +17,8 @@ def parse_xc_code(xc_code):
     codes = {}
     code = -999
     orig_keys = {k for k in dft.libxc.XC_KEYS}
-    orig_codes = {key:val for key, val in dft.libxc.XC_CODES.items()}
-    while(not success and cnt < 20):
+    orig_codes = {key: val for key, val in dft.libxc.XC_CODES.items()}
+    while (not success and cnt < 20):
         try:
             parsed = parse_xc(xc_code)
             success = True
@@ -43,9 +44,10 @@ def parse_xc_code(xc_code):
     dft.libxc.XC_CODES = orig_codes
     return parsed
 
+
 def find_max_level(parsed_xc):
 
-    xc_levels = {'LDA':0, 'GGA':1, 'MGGA':2}
+    xc_levels = {'LDA': 0, 'GGA': 1, 'MGGA': 2}
     parsed_xc = parsed_xc[1]
     highest_xc = 'LDA'
     highest_level = 0
@@ -55,4 +57,4 @@ def find_max_level(parsed_xc):
             highest_xc = l
             highest_level = xc_levels[l]
 
-    return highest_xc    
+    return highest_xc

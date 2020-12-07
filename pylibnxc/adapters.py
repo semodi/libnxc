@@ -8,7 +8,7 @@ def get_nxc_adapter(kind, path, options={}):
     """ Adapter factory for NeuralXC
     """
     kind = kind.lower()
-    adapter_dict = { 'pyscf': PySCFNXC}
+    adapter_dict = {'pyscf': PySCFNXC}
     if not kind in adapter_dict:
         raise ValueError('Selected Adapter not available')
     else:
@@ -30,17 +30,18 @@ class NXCAdapter(ABC):
     def compute(self):
         pass
 
-class PySCFNXC(NXCAdapter):
 
+class PySCFNXC(NXCAdapter):
     def initialize(self, grid_coords, grid_weights, mol):
         """ PySCF adapter for atomic (NeuralXC) models
         """
         self.initialized = True
         self.grid_weights = np.array(grid_weights)
-        self._adaptee.initialize(grid_coords=np.array(grid_coords),
-                    grid_weights=np.array(grid_weights),
-                    positions=mol.atom_coords(),
-                    species=[mol.atom_symbol(i) for i in range(mol.natm)])
+        self._adaptee.initialize(
+            grid_coords=np.array(grid_coords),
+            grid_weights=np.array(grid_weights),
+            positions=mol.atom_coords(),
+            species=[mol.atom_symbol(i) for i in range(mol.natm)])
 
     def compute(self, *args, **kwargs):
         output = self._adaptee.compute(*args, **kwargs)

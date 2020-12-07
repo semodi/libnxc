@@ -7,6 +7,7 @@ import numpy as np
 import os
 from functools import partial
 
+
 def KS(mol, method, nxc='', nxc_kind='grid', **kwargs):
     """ Wrapper for the pyscf RKS and UKS class
     that uses a libnxc functionals
@@ -18,12 +19,17 @@ def KS(mol, method, nxc='', nxc_kind='grid', **kwargs):
             mf.get_veff = veff_mod_atomic(mf, model)
         elif nxc_kind.lower() == 'grid':
             parsed_xc = parse_xc_code(nxc)
-            dft.libxc.define_xc_(mf._numint, eval_xc, find_max_level(parsed_xc),
-                hyb=parsed_xc[0][0])
+            dft.libxc.define_xc_(mf._numint,
+                                 eval_xc,
+                                 find_max_level(parsed_xc),
+                                 hyb=parsed_xc[0][0])
             mf.xc = nxc
         else:
-            raise ValueError("{} not a valid nxc_kind. Valid options are 'atomic' or 'grid'".format(nxc_kind))
+            raise ValueError(
+                "{} not a valid nxc_kind. Valid options are 'atomic' or 'grid'"
+                .format(nxc_kind))
     return mf
+
 
 RKS = partial(KS, method=dft.RKS)
 UKS = partial(KS, method=dft.UKS)
@@ -36,7 +42,7 @@ def eval_xc(xc_code, rho, spin=0, relativity=0, deriv=1, verbose=None):
     inp = {}
     if spin == 0:
         if rho.ndim == 1:
-            rho = rho.reshape(1,-1)
+            rho = rho.reshape(1, -1)
         inp['rho'] = rho[0]
         if len(rho) > 1:
             dx, dy, dz = rho[1:4]
@@ -48,19 +54,19 @@ def eval_xc(xc_code, rho, spin=0, relativity=0, deriv=1, verbose=None):
     else:
         rho_a, rho_b = rho
         if rho_a.ndim == 1:
-            rho_a = rho_a.reshape(1,-1)
-            rho_b = rho_b.reshape(1,-1)
-        inp['rho'] = np.stack([rho_a[0],rho_b[0]])
+            rho_a = rho_a.reshape(1, -1)
+            rho_b = rho_b.reshape(1, -1)
+        inp['rho'] = np.stack([rho_a[0], rho_b[0]])
         if len(rho_a) > 1:
             dxa, dya, dza = rho_a[1:4]
             dxb, dyb, dzb = rho_b[1:4]
-            gamma_a = (dxa**2 + dya**2 + dza**2) #compute contracted gradients
+            gamma_a = (dxa**2 + dya**2 + dza**2)  #compute contracted gradients
             gamma_b = (dxb**2 + dyb**2 + dzb**2)
-            gamma_ab = (dxb*dxa + dyb*dya + dzb*dza)
+            gamma_ab = (dxb * dxa + dyb * dya + dzb * dza)
             inp['sigma'] = np.stack([gamma_a, gamma_ab, gamma_b])
         if len(rho_a) > 4:
-            inp['lapl'] = np.stack([rho_a[4],rho_b[4]])
-            inp['tau'] = np.stack([rho_a[5],rho_b[5]])
+            inp['lapl'] = np.stack([rho_a[4], rho_b[4]])
+            inp['tau'] = np.stack([rho_a[5], rho_b[5]])
 
     parsed_xc = parse_xc_code(xc_code)
     total_output = {'v' + key: 0.0 for key in inp}
@@ -71,7 +77,7 @@ def eval_xc(xc_code, rho, spin=0, relativity=0, deriv=1, verbose=None):
         output = model.compute(inp)
         for key in output:
             if output[key] is not None:
-                total_output[key] += output[key]*factor
+                total_output[key] += output[key] * factor
 
     exc, vlapl, vtau, vrho, vsigma = [total_output.get(key,None)\
       for key in ['zk','vlapl','vtau','vrho','vsigma']]
@@ -81,7 +87,8 @@ def eval_xc(xc_code, rho, spin=0, relativity=0, deriv=1, verbose=None):
     kxc = None  # 3rd order functional derivative
     return exc, vxc, fxc, kxc
 
-def veff_mod_atomic(mf, model) :
+
+def veff_mod_atomic(mf, model):
     """ Wrapper to get the modified get_veff() that uses a NeuralXC
     atomic potential
     """
@@ -89,27 +96,27 @@ def veff_mod_atomic(mf, model) :
         rho0 = rho[:1]
         gamma = None
 
-        exc, V_nxc = model.compute(rho0.flatten(),edens=True)
+        exc, V_nxc = model.compute(rho0.flatten(), edens=True)
 
         vrho = V_nxc
 
         vgamma = np.zeros_like(V_nxc)
         vlapl = None
         vtau = None
-        vxc = (vrho , vgamma, vlapl, vtau)
+        vxc = (vrho, vgamma, vlapl, vtau)
         fxc = None  # 2nd order functional derivative
         kxc = None  # 3rd order functional derivative
 
         return exc, vxc, fxc, kxc
 
     def get_veff(mol=None, dm=None, dm_last=0, vhf_last=0, hermi=1):
-        mf.define_xc_(mf.xc,'GGA') #TODO: This doesn't seem quite right
+        mf.define_xc_(mf.xc, 'GGA')  #TODO: This doesn't seem quite right
         veff = dft.rks.get_veff(mf, mol, dm, dm_last, vhf_last, hermi)
-        mf.define_xc_(eval_xc,'GGA')
+        mf.define_xc_(eval_xc, 'GGA')
         model.initialize(mf.grids.coords, mf.grids.weights, mol)
-        vnxc = dft.rks.get_veff(mf, mol, dm, dm_last,
-            vhf_last, hermi)
-        veff[:, :] += (vnxc[:, :] - vnxc.vj[:,:])
+        vnxc = dft.rks.get_veff(mf, mol, dm, dm_last, vhf_last, hermi)
+        veff[:, :] += (vnxc[:, :] - vnxc.vj[:, :])
         veff.exc += vnxc.exc
         return veff
+
     return get_veff
