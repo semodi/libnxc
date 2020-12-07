@@ -430,8 +430,9 @@ If the functional type is "atomic" two additional keyword arguments can be provi
   - `do_forces`: bool, Compute the pulay force corrections. The output dict will then
   contain an entry named `'forces'`.
   - `edens`: bool, Return energy per unit particle if `True`, total energy otherwise
+  
 In this case, instead of providing the electron density as `'rho'` the projected density
-or ML-descriptors can be provided as `'c'` in which case the density projection step
+or ML-descriptors can be provided as `'c'`. Doing so, the density projection step
 is skipped but force corrections are not available. This might save resources for
 codes for which analytical integrals over orbitals are available.
 
