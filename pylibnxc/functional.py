@@ -72,9 +72,8 @@ class NXCFunctional(ABC):
 
 class GridFunc(NXCFunctional):
 
-    _gamma_eps = 1e-8
-
-    # _gamma_eps = 0
+    # _gamma_eps = 1e-8
+    _gamma_eps = 0
 
     def compute(self, inp, do_exc=True, do_vxc=True, **kwargs):
         """ Evaluate the functional on a given input

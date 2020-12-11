@@ -22,12 +22,14 @@ const std::vector<std::string> model_names = {
   "GGA_HM",
   "MGGA_HM",
   "GGA_PBE",
-  "GGA_X_PBE"
+  "GGA_X_PBE",
+  "GGA_KSR"
 };
 const std::vector<int> model_types = {
   LDA_TYPE,
   GGA_TYPE,
   MGGA_TYPE,
+  GGA_TYPE,
   GGA_TYPE,
   GGA_TYPE
 };

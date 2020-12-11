@@ -108,7 +108,7 @@ def test_nn_pbe(name, funcname):
         'PBE': ['GGA_PBE', 'PBE'],
         'PBE_comp': ['GGA_X_PBE, GGA_C_PBE', 'PBE'],
         'PBE0': ['0.75*GGA_X_PBE+0.25*HF,GGA_C_PBE', 'PBE0'],
-        'SCAN': ['MGGA_SCAN', 'SCAN']
+        'SCAN': ['MGGA_SCAN2', 'SCAN']
     }[funcname]
     nxc_path = func[0]
 
@@ -121,7 +121,19 @@ def test_nn_pbe(name, funcname):
                  9            .000000    .000    .70""",
         'NO':
         """ 8            .000000    .000   .000
-                 7            .000000    .000    1.37"""
+                 7            .000000    .000    1.37""",
+        'F2':
+        """ 9   0   0   0
+            9   0   0   1.42""",
+        'CO2':
+        """ 8            .000000    .000   -1.16
+            8            .000000    .000   1.16
+            6            .000000    .000    .000""",
+        'N2C2':
+        """ 7       0   0   1.8459
+            7       0   0   -1.8459
+            6       0   0   0.687868
+            6       0   0   -0.687868"""
     }
 
     # if name == 'NO' and funcname == 'PBE':
@@ -133,6 +145,7 @@ def test_nn_pbe(name, funcname):
     if name == 'NO':
         mol.spin = 1
     mol.charge = 0
+    mol.verbose=4
     mol.basis = "6-311+G*"
     mol.build()
     results = []
@@ -141,8 +154,9 @@ def test_nn_pbe(name, funcname):
         methods = methods[-1:]
     for method in methods:
         mf = method(mol, nxc=nxc_path)
-        mf.grids.level = 6
+        mf.grids.level = 5
         mf.kernel()
+        assert mf.converged
         results.append(mf.e_tot)
     assert all([np.allclose(r, results[-1]) for r in results])
     nn_etot = results[0]
@@ -152,8 +166,9 @@ def test_nn_pbe(name, funcname):
     else:
         mf = dft.UKS(mol)
     mf.xc = func[1]
-    mf.grids.level = 6
+    mf.grids.level = 5
     mf.kernel()
+    # assert mf.converged
     pbe_etot = mf.e_tot
     assert np.allclose(pbe_etot, nn_etot, atol=1e-4)
 
@@ -166,7 +181,8 @@ def test_nn_pbe_composite(name, funcname):
 
 
 @pytest.mark.skipif(not pyscf_found, reason='requires pyscf')
-@pytest.mark.parametrize('name', ['LiF', 'NO'])
+@pytest.mark.parametrize('name', ['H2', 'LiF', 'NO','F2','CO2','N2C2'])
+# @pytest.mark.parametrize('name', ['LiF'])
 @pytest.mark.parametrize('funcname', ['SCAN'])
 def test_nn_scan(name, funcname):
     test_nn_pbe(name, funcname)
