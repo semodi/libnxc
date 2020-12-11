@@ -282,7 +282,8 @@ void nxc_mgga_exc_vxc(nxc_func_type* p, int np, double rho[],double sigma[], dou
 ```
 The arguments are defined in the same way as for Libxc with the notable exception that
 sigma (and accordingly vsigma) can either be the reduced gradient or the gradient of the
-density (and the corresponding potential term) depending on the parameter `gamma` in the `func_param` struct.
+density (and the corresponding potential term) depending on the parameter `gamma` in the `func_param` struct. For multidimensional arrays 
+the **fastest** index is understood to run over grid points. `int np` is the full size of the array `rho`, i.e. for spin polarized calculations (`NXC_SPIN_POLARIZED`) it is twice the number of grid points, and equal to the number of grid points for unpolarized calculations. 
 
 NeuralXC functionals require special treatment, as their dependency on localized atomic orbitals produces additional
 terms when evaluating forces and stress. These corrections can be obtained with the method `nxc_lda_exc_vxc_fs`, which
@@ -430,8 +431,9 @@ If the functional type is "atomic" two additional keyword arguments can be provi
   - `do_forces`: bool, Compute the pulay force corrections. The output dict will then
   contain an entry named `'forces'`.
   - `edens`: bool, Return energy per unit particle if `True`, total energy otherwise
+  
 In this case, instead of providing the electron density as `'rho'` the projected density
-or ML-descriptors can be provided as `'c'` in which case the density projection step
+or ML-descriptors can be provided as `'c'`. Doing so, the density projection step
 is skipped but force corrections are not available. This might save resources for
 codes for which analytical integrals over orbitals are available.
 
