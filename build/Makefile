@@ -19,11 +19,11 @@ ARCH_MAKE?=$(ARCH_MAKE_DEFAULT)
 include $(ARCH_MAKE)
 #
 #
-libnxc_serial.so: defaults.o gridfunc.o nxc_func.o atomicfunc.o nxc.o nxc_f90.o
+libnxc_serial.so: defaults.o gridfunc.o nxc_func.o atomicfunc.o nxc.o nxc_f90.o nxc_c.o
 	$(FC) *.o -DBOOST_MATH_DISABLE_FLOAT128 -fPIC  -Wl,-rpath,/lib -L/lib  -Wl,-rpath,$(TORCH)/lib/ $(TORCH)/lib/libtorch.so $(TORCH)/lib/libc10.so -Wl,--no-as-needed,$(TORCH)/lib/libtorch_cpu.so -Wl,--as-needed $(TORCH)/lib/libc10.so -lpthread -Wl,--no-as-needed,$(TORCH)/lib/libtorch.so -Wl,--as-needed -lgfortran -lquadmath -lstdc++ -shared -o libnxc.so
 	@mv libnxc.so ../libnxc_serial.so
 
-libnxc_mpi.so: defaults.o gridfunc.o nxc_func.o atomicfunc.o nxc.o nxc_f90.o
+libnxc_mpi.so: defaults.o gridfunc.o nxc_func.o atomicfunc.o nxc.o nxc_f90.o nxc_c.o
 	$(FC) *.o -DBOOST_MATH_DISABLE_FLOAT128 -fPIC  -Wl,-rpath,/lib -L/lib  -Wl,-rpath,$(TORCH)/lib/ $(TORCH)/lib/libtorch.so $(TORCH)/lib/libc10.so -Wl,--no-as-needed,$(TORCH)/lib/libtorch_cpu.so -Wl,--as-needed $(TORCH)/lib/libc10.so -lpthread -Wl,--no-as-needed,$(TORCH)/lib/libtorch.so -Wl,--as-needed -lgfortran -lquadmath -lstdc++ -shared -o libnxc.so
 	@mv libnxc.so ../libnxc_mpi.so
 

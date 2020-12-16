@@ -1,13 +1,6 @@
 #ifndef NXCF_H
 #define NXCF_H
-#include "nxc.h"
-#include <iostream>
-#include <memory>
-#include "nxc_func.h"
 extern "C"{
-
-bool func_set=false;
-nxc_func_type nxc_func;
 
 void nxc_f90_set_code_(int * code);
 void nxc_f90_use_cuda_();
@@ -59,6 +52,7 @@ void nxc_f90_lda_exc_vxc_fs_(int* np, double rho[], double exc[], double vrho[],
 */
 void nxc_f90_gga_exc_vxc_(int* np, double rho[], double sigma[], double exc [],
     double vrho[], double vsigma[], int* ierr);
+
 
 /**
 * Evaluates the functional on provided density if functional is MGGA type.

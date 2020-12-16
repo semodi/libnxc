@@ -88,7 +88,7 @@ void LDAFunc::exc_vxc(int np, double rho[], double * exc, double vrho[]){
     }
 
     torch::Tensor trho0 = rho_inp;
-    filter = torch::sum(trho0, 0) > 1e-8;
+    filter = torch::sum(trho0.index({torch::tensor({0,1}),"..."}),0) > 1e-7;
     trho0 = trho0.index({"...",filter});
     if (trho0.size(1)==0){
       for(int i=0; i<np;i++){ //TODO: This is not entirely correct
@@ -170,20 +170,26 @@ void GGAFunc::exc_vxc(int np, double rho[], double sigma[],
     if (gamma){
       sigma_aa = sigma_inp.select(0,0)*sigma_inp.select(0,0) +
                  sigma_inp.select(0,1)*sigma_inp.select(0,1) +
-                 sigma_inp.select(0,2)*sigma_inp.select(0,2) + 1e-9;
+                 sigma_inp.select(0,2)*sigma_inp.select(0,2) + 1e-8;
       sigma_bb = sigma_inp.select(0,3)*sigma_inp.select(0,3) +
                  sigma_inp.select(0,4)*sigma_inp.select(0,4) +
-                 sigma_inp.select(0,5)*sigma_inp.select(0,5) + 1e-9;
+                 sigma_inp.select(0,5)*sigma_inp.select(0,5) + 1e-8;
       sigma_ab = sigma_inp.select(0,0)*sigma_inp.select(0,3) +
                  sigma_inp.select(0,1)*sigma_inp.select(0,4) +
-                 sigma_inp.select(0,2)*sigma_inp.select(0,5) + 1e-9;
+                 sigma_inp.select(0,2)*sigma_inp.select(0,5) + 1e-8;
 
       sigma_inp = torch::cat({sigma_aa.unsqueeze(0), sigma_ab.unsqueeze(0), sigma_bb.unsqueeze(0)});
     }
 
     torch::Tensor trho0 = torch::cat({rho_inp, sigma_inp});
-    filter = torch::sum(trho0,0) > 1e-8;
+    filter = torch::sum(trho0.index({torch::tensor({0,1}),"..."}),0) > 1e-7;
     trho0 = trho0.index({"...",filter});
+    bool padded_trho0 = false;
+
+    if (trho0.size(1)==1){
+      trho0 = trho0.repeat({1,2});
+      padded_trho0 = true;
+    }
     if (trho0.size(1)==0){
       for(int i=0; i<np;i++){ //TODO: This is not entirely correct
         exc[i] = 0;
@@ -194,13 +200,17 @@ void GGAFunc::exc_vxc(int np, double rho[], double sigma[],
       torch::Tensor texc, Exc;
       texc_full = torch::zeros_like(rho_inp.select(0,0));
       texc = model.energy.forward({trho0.transpose(0,1)}).toTensor().select(1,0);
+      if (padded_trho0)
+        texc = texc.index({"...",0});
       // texc_full = torch::where(filter, texc, texc_full);
       texc_full.index_put_({filter}, texc);
       if (!torch::equal(texc,texc)){
         std::cout << texc.index({filter}) << std::endl;
         throw ("NaN encountered");
       }
-
+      if (*(torch::any(texc>1e5).data_ptr<bool>())){
+        std::cout << "Exc overflow"<<std::endl;
+      }
       Exc = torch::dot(texc_full, torch::sum(rho_inp, 0));
       Exc.backward();
 
@@ -290,7 +300,7 @@ void MGGAFunc::exc_vxc(int np, double rho[], double sigma[], double lapl[],
     }
 
     torch::Tensor trho0 = torch::cat({rho_inp, sigma_inp, lapl_inp, tau_inp});
-    filter = torch::sum(trho0,0) > 1e-8;
+    filter = torch::sum(trho0.index({torch::tensor({0,1}),"..."}),0) > 1e-7;
     trho0 = trho0.index({"...",filter});
     if (trho0.size(1)==0){
       for(int i=0; i<np;i++){ //TODO: This is not entirely correct

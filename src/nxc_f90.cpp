@@ -1,6 +1,13 @@
 #include "nxc_f90.h"
+#include "nxc.h"
+#include <iostream>
+#include <memory>
+#include "nxc_func.h"
+
 extern "C"{
 
+nxc_func_type nxc_func;
+bool func_set=false;
 void nxc_f90_set_code_(int * code){
   nxc_set_code(*code);
 }
