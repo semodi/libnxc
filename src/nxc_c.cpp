@@ -16,17 +16,21 @@ void nxc_c_gga_exc_vxc(int * xc_func, int np, double rho[], double sigma[],
   nxc_gga_exc_vxc(&nxc_func_c, np, rho, sigma, exc, vrho, vsigma);
     }
 
-void nxc_c_gga_x_init(int* xc_func){
+void nxc_c_gga_xc_init(int xc_func){
   func_param fp;
-  nxc_func_init(&nxc_func_c, "GGA_X_PBE", fp, NXC_UNPOLARIZED);
-}
-void nxc_c_gga_c_init(int* xc_func){
-  func_param fp;
-  nxc_func_init(&nxc_func_c, "GGA_C_PBE", fp, NXC_UNPOLARIZED);
-}
-void nxc_c_gga_xc_init(int* xc_func){
-  func_param fp;
-  nxc_func_init(&nxc_func_c, "GGA_PBE", fp, NXC_UNPOLARIZED);
+  switch(xc_func){   //TODO : hash table solution would be easier/better here
+    case XC_GGA_X_NXC:
+      nxc_func_init(&nxc_func_c, "GGA_X_PBE", fp, NXC_UNPOLARIZED);
+      break;
+    case XC_GGA_C_NXC:
+      nxc_func_init(&nxc_func_c, "GGA_C_PBE", fp, NXC_UNPOLARIZED);
+      break;
+    case XC_GGA_XC_NXC:
+      nxc_func_init(&nxc_func_c, "GGA_PBE", fp, NXC_UNPOLARIZED);
+      break;
+    default:
+      throw ("NXC functional unknown");
+  }
 }
 
 #ifdef __cplusplus
