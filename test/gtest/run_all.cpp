@@ -2,15 +2,50 @@
 #include "atomic.h"
 #include "grid.h"
 #include "cuda.h"
+#ifdef LIBXC
+#include "libxc.h"
+#endif
 const double TOL = 1e-6;
 namespace{
 
+#ifdef CUDA
 TEST(cuda, cudaavail){
   EXPECT_EQ(1, test_cuda());
 }
 TEST(cuda, sendmodel){
   EXPECT_EQ(0, send_model());
 }
+#endif
+
+#ifdef LIBXC
+TEST(libxc, libxcpbe){
+  double exc1[5];
+  double vrho1[5];
+  double vsigma1[5];
+  double vtau1[5];
+  double exc2[5];
+  double vrho2[5];
+  double vsigma2[5];
+  double vtau2[5];
+  const int nfunc = 3;
+  int func1[nfunc] = {801, 802, 806};
+  int func2[nfunc] = {101, 130, 101};
+
+  for (int j=0; j<nfunc;++j){
+    std::cout << "Comparing" << std::endl;
+    test_func(func1[j], exc1, vrho1, vsigma1, vtau1);
+    std::cout << "to" << std::endl;
+    test_func(func2[j], exc2, vrho2, vsigma2, vtau2);
+    for (int i=0; i<5;++i){
+      EXPECT_LT(abs(exc1[i]-exc2[i]),1e-3);
+      EXPECT_LT(abs(vrho1[i]-vrho2[i]),1e-3);
+      EXPECT_LT(abs(vsigma1[i]-vsigma2[i]),1e-3);
+    }
+    std::cout << "==========" << std::endl;
+  }
+}
+#endif
+
 TEST(atomic, loadmodelnopar){
   // Load model without any functional parameters
   EXPECT_EQ(0, load_model_nopar());
@@ -73,7 +108,8 @@ TEST(grid, testhmgga){
     double vsigma_p[300];
     double exc_p[100];
     int cuda=0;
-    for (cuda=0;cuda<test_cuda()+1;++cuda){
+    // for (cuda=0;cuda<test_cuda()+1;++cuda){
+    for (cuda=0;cuda< 1;++cuda){
       test_hm_gga(vrho_up, vsigma_up, exc_up, vrho_p, vsigma_p, exc_p, cuda);
 
       // Compare spin-polarized to unpolarized results and check

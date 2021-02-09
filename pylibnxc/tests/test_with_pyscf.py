@@ -108,7 +108,9 @@ def test_nn_pbe(name, funcname):
         'PBE': ['GGA_PBE', 'PBE'],
         'PBE_comp': ['GGA_X_PBE, GGA_C_PBE', 'PBE'],
         'PBE0': ['0.75*GGA_X_PBE+0.25*HF,GGA_C_PBE', 'PBE0'],
-        'SCAN': ['MGGA_SCAN2', 'SCAN']
+        'SCAN': ['MGGA_SCAN2', 'SCAN'],
+        'revTPSS_X': ['MGGA_X_REVTPSS','MGGA_X_REVTPSS'],
+        'revTPSS': ['MGGA_XC_REVTPSS','REVTPSS'],
     }[funcname]
     nxc_path = func[0]
 
@@ -185,4 +187,12 @@ def test_nn_pbe_composite(name, funcname):
 # @pytest.mark.parametrize('name', ['LiF'])
 @pytest.mark.parametrize('funcname', ['SCAN'])
 def test_nn_scan(name, funcname):
+    test_nn_pbe(name, funcname)
+
+@pytest.mark.skipif(not pyscf_found, reason='requires pyscf')
+@pytest.mark.parametrize('name', ['H2', 'LiF', 'NO','F2','CO2','N2C2'])
+# @pytest.mark.parametrize('name', ['LiF'])
+# @pytest.mark.parametrize('funcname', ['revTPSS_X','revTPSS'])
+@pytest.mark.parametrize('funcname', ['revTPSS'])
+def test_nn_revtpss(name, funcname):
     test_nn_pbe(name, funcname)

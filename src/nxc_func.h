@@ -1,6 +1,7 @@
 #ifndef NXC_FUNC_H
 #define NXC_FUNC_H
 #include "nxc.h"
+#include "funcs.h"
 #include <torch/script.h> // One-stop header.
 // #include "nxc_mpi.h"
 
@@ -9,32 +10,9 @@ const double HARTREE = 27.211386024367243;
 const auto options_dp = torch::TensorOptions().dtype(torch::kFloat64);
 const auto options_int = torch::TensorOptions().dtype(torch::kInt);
 
-const int LDA_TYPE=0;
-const int GGA_TYPE=1;
-const int MGGA_TYPE=2;
-const int ATOMIC_TYPE=4;
-
 const int DEVICE_CUDA=1;
 const int DEVICE_CPU=0;
 
-const std::vector<std::string> model_names = {
-  "LDA_HM",
-  "GGA_HM",
-  "MGGA_HM",
-  "GGA_PBE",
-  "GGA_X_PBE",
-  "GGA_KSR",
-  "GGA_C_PBE"
-};
-const std::vector<int> model_types = {
-  LDA_TYPE,
-  GGA_TYPE,
-  MGGA_TYPE,
-  GGA_TYPE,
-  GGA_TYPE,
-  GGA_TYPE,
-  GGA_TYPE
-};
 
 struct modules{
     torch::jit::script::Module basis;

@@ -2,10 +2,16 @@
 std::shared_ptr<NXCFunc> get_functional(std::string model)
 {
 
-  int cnt = 0;
-  for (const auto& name: model_names){
-    if (model==name){
-      switch(model_types[cnt]){
+  bool found = false;
+
+  std::for_each(funcs.begin(),funcs.end(),
+                [&model, &found](const std::pair<int,std::string> &p){
+                  if (p.second == model)
+                    found = true;
+                });
+
+  if (found)
+      switch(xctypes.at(model)){
         case LDA_TYPE:
            return std::make_shared<LDAFunc>(model);
            break;
@@ -15,9 +21,7 @@ std::shared_ptr<NXCFunc> get_functional(std::string model)
         case MGGA_TYPE:
            return std::make_shared<MGGAFunc>(model);
            break;
-      }
-    }
-    ++cnt;
-  }
+         }
+
   return std::make_shared<AtomicFunc>(model);
 }

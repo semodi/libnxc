@@ -28,12 +28,13 @@ inline void distribute_v(double * v_src, double * v_tar,
 
 GridFunc::GridFunc(std::string modelname){
 
+    std::string fullname;
     if(std::getenv("NXC_MODELPATH")){
         const char* modeldir;
         modeldir = std::getenv("NXC_MODELPATH");
-        modelname = std::string(modeldir) + modelname;
+        fullname = std::string(modeldir) + modelname;
     }else{
-        modelname = default_modeldir + modelname;
+        fullname = default_modeldir + modelname;
     }
 
     std::string path;
@@ -41,8 +42,15 @@ GridFunc::GridFunc(std::string modelname){
       path =  modelname + "/xc";
       model.energy = torch::jit::load(path);
     }catch (const c10::Error& e) {
-      std::cerr << "error loading the model " << path << std::endl;
-      throw(e);
+      try {
+        path =  fullname + "/xc";
+        model.energy = torch::jit::load(path);
+      }catch (const c10::Error& e) {
+        std::cerr << "error loading the model " << path << std::endl;
+        throw(e);
+      }
+      // std::cerr << "error loading the model " << path << std::endl;
+      // throw(e);
     }
 }
 
@@ -88,6 +96,7 @@ void LDAFunc::exc_vxc(int np, double rho[], double * exc, double vrho[]){
     }
 
     torch::Tensor trho0 = rho_inp;
+    trho0 = torch::where(trho0 > 0, trho0, torch::zeros_like(trho0));
     filter = torch::sum(trho0.index({torch::tensor({0,1}),"..."}),0) > 1e-7;
     trho0 = trho0.index({"...",filter});
     if (trho0.size(1)==0){
@@ -170,19 +179,20 @@ void GGAFunc::exc_vxc(int np, double rho[], double sigma[],
     if (gamma){
       sigma_aa = sigma_inp.select(0,0)*sigma_inp.select(0,0) +
                  sigma_inp.select(0,1)*sigma_inp.select(0,1) +
-                 sigma_inp.select(0,2)*sigma_inp.select(0,2) + 1e-8;
+                 sigma_inp.select(0,2)*sigma_inp.select(0,2) ;
       sigma_bb = sigma_inp.select(0,3)*sigma_inp.select(0,3) +
                  sigma_inp.select(0,4)*sigma_inp.select(0,4) +
-                 sigma_inp.select(0,5)*sigma_inp.select(0,5) + 1e-8;
+                 sigma_inp.select(0,5)*sigma_inp.select(0,5) ;
       sigma_ab = sigma_inp.select(0,0)*sigma_inp.select(0,3) +
                  sigma_inp.select(0,1)*sigma_inp.select(0,4) +
-                 sigma_inp.select(0,2)*sigma_inp.select(0,5) + 1e-8;
+                 sigma_inp.select(0,2)*sigma_inp.select(0,5) ;
 
       sigma_inp = torch::cat({sigma_aa.unsqueeze(0), sigma_ab.unsqueeze(0), sigma_bb.unsqueeze(0)});
     }
 
     torch::Tensor trho0 = torch::cat({rho_inp, sigma_inp});
-    filter = torch::sum(trho0.index({torch::tensor({0,1}),"..."}),0) > 1e-7;
+    trho0 = torch::where(trho0 > 0, trho0, torch::zeros_like(trho0));
+    filter = torch::sum(trho0.index({torch::tensor({0,1}),"..."}),0) > 1e-10;
     trho0 = trho0.index({"...",filter});
     bool padded_trho0 = false;
 
@@ -207,9 +217,6 @@ void GGAFunc::exc_vxc(int np, double rho[], double sigma[],
       if (!torch::equal(texc,texc)){
         std::cout << texc.index({filter}) << std::endl;
         throw ("NaN encountered");
-      }
-      if (*(torch::any(texc>1e5).data_ptr<bool>())){
-        std::cout << "Exc overflow"<<std::endl;
       }
       Exc = torch::dot(texc_full, torch::sum(rho_inp, 0));
       Exc.backward();
@@ -239,7 +246,6 @@ void GGAFunc::exc_vxc(int np, double rho[], double sigma[],
 void MGGAFunc::exc_vxc(int np, double rho[], double sigma[], double lapl[],
         double tau[], double * exc, double vrho[], double vsigma[], double vlapl[], double vtau[])
 {
-
     torch::Tensor trho_cud, tsigma_cud, sigma_aa, sigma_bb,
       sigma_ab, tsigma, filter, texc_full, tlapl_cud, ttau_cud;
     // Assuming row-major order to resolve spin, caution when passing from fortran!
@@ -288,19 +294,20 @@ void MGGAFunc::exc_vxc(int np, double rho[], double sigma[], double lapl[],
     if (gamma){
       sigma_aa = sigma_inp.select(0,0)*sigma_inp.select(0,0) +
                  sigma_inp.select(0,1)*sigma_inp.select(0,1) +
-                 sigma_inp.select(0,2)*sigma_inp.select(0,2) + 1e-7;
+                 sigma_inp.select(0,2)*sigma_inp.select(0,2) ;
       sigma_bb = sigma_inp.select(0,3)*sigma_inp.select(0,3) +
                  sigma_inp.select(0,4)*sigma_inp.select(0,4) +
-                 sigma_inp.select(0,5)*sigma_inp.select(0,5) + 1e-7;
+                 sigma_inp.select(0,5)*sigma_inp.select(0,5) ;
       sigma_ab = sigma_inp.select(0,0)*sigma_inp.select(0,3) +
                  sigma_inp.select(0,1)*sigma_inp.select(0,4) +
-                 sigma_inp.select(0,2)*sigma_inp.select(0,5) + 1e-7;
+                 sigma_inp.select(0,2)*sigma_inp.select(0,5) ;
 
       sigma_inp = torch::cat({sigma_aa.unsqueeze(0), sigma_ab.unsqueeze(0), sigma_bb.unsqueeze(0)});
     }
 
     torch::Tensor trho0 = torch::cat({rho_inp, sigma_inp, lapl_inp, tau_inp});
-    filter = torch::sum(trho0.index({torch::tensor({0,1}),"..."}),0) > 1e-7;
+    trho0 = torch::where(trho0 > 0, trho0, torch::zeros_like(trho0));
+    filter = torch::sum(trho0.index({torch::tensor({0,1}),"..."}),0) > 1e-10;
     trho0 = trho0.index({"...",filter});
     if (trho0.size(1)==0){
       for(int i=0; i<np;i++){ //TODO: This is not entirely correct

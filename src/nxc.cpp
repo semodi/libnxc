@@ -1,9 +1,8 @@
 // #include <torch/script.h> // One-stop header.
 #include <torch/torch.h> // One-stop header.
-#include "nxc.h"
-#include "nxc_func.h"
 #include <iostream>
 #include <memory>
+#include "nxc.h"
 
 void nxc_func_init(nxc_func_type* p, std::string model, func_param fp, int nspin){
     std::shared_ptr<NXCFunc> f = get_functional(model);
