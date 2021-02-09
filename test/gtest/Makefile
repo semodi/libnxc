@@ -7,16 +7,14 @@ CPPFLAGS+=-DCUDA
 else
 endif
 
-ifneq ($(LIBXC),)
-CPPFLAGS+=-DLIBXC -I/opt/etsf/include/
-LDFLAGS+=-L/opt/etsf/lib/ -lxc -lm
+ifneq ($(LIBXC_INCLUDE),)
+CPPFLAGS+=-DLIBXC $(LIBXC_INCLUDE)
+LDFLAGS+=$(LIBXC_LD) -lm
 else
 endif
 
-
-
 default: libxc.o cuda.o grid.o atomic.o run_all.o
-	$(CXX) -L/usr/local/lib/gtest ../../libnxc.so *.o -o run_all.x -lgtest -pthread $(LDFLAGS)
+	$(CXX)  ../../libnxc.so *.o -o run_all.x -pthread $(LDFLAGS) $(GTEST)
 	./run_all.x
 	@make clean
 

@@ -1,4 +1,6 @@
-LIBXCDIR=/home/sebastian/Research/libxc-4.3.4/src
+ARCH_MAKE_DEFAULT=../../arch.make
+ARCH_MAKE?=$(ARCH_MAKE_DEFAULT)
+include $(ARCH_MAKE)
 CFILES=$(wildcard *.c)
 TARGETS=$(patsubst %.c, $(LIBXCDIR)/%.c , $(CFILES))
 TARGETSRM=$(patsubst %.c, %.crm , $(CFILES))
