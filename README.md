@@ -1,6 +1,6 @@
 # Lib**n**xc
 
-Libnxc is a libary to deploy **machine learned** exchange-correlation functionals for density functional theory.
+Libnxc is a libary to use **machine learned** exchange-correlation functionals for density functional theory.
 
 All common functional types (LDA, GGA, metaGGA) as well as NeuralXC type functionals  are supported.
 
