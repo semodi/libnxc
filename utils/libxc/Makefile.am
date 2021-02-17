@@ -6,6 +6,7 @@
 ## License, v. 2.0. If a copy of the MPL was not distributed with this
 ## file, You can obtain one at http://mozilla.org/MPL/2.0/.
 ##
+## Modified by Sebastian Dick 2021
 
 SUBDIRS = maple2c
 
@@ -28,7 +29,7 @@ xc_sanity_SOURCES = xc-sanity.c
 xc_sanity_LDADD = libxc.la -lm -lnxc
 xc_sanity_LDFLAGS =
 
-lib_LTLIBRARIES = libxc.la 
+lib_LTLIBRARIES = libxc.la
 
 libxc_la_FUNC_SOURCES = \
 	special_functions.c bessel.c expint_e1.c integrate.c util.c	\
@@ -214,4 +215,3 @@ libxcf03.f90 : libxc_master.F03 libxc_inc.f03
 	fi
 
 $(XCF03LIBMODS)   : $(LTPREF03)libxcf03.lo
-

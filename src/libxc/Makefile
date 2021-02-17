@@ -9,6 +9,7 @@ default: $(TARGETS)
 
 $(LIBXCDIR)/%.c : %.c
 	ln -s $(CURDIR)/$< $(LIBXCDIR)/$*.c
+	cp $(CURDIR)/../../utils/libxc/Makefile.am $(LIBXCDIR)
 
 .PHONY: clean
 clean: $(TARGETSRM)

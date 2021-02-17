@@ -15,8 +15,10 @@ Table of Contents
 
    * [Lib<strong>n</strong>xc](#libnxc)
       * [Dependencies](#dependencies)
+      * [Installation](#Installation)
       * [Quickstart](#quickstart)
       * [Using Pylibnxc with PySCF](#using-pylibnxc-with-pyscf)
+      * [Using Libnxc with Libxc](#using-libnxc-with-libxc)
       * [C++ Interface](#c-interface)
          * [Functional parameters](#functional-parameters)
          * [Initializing the functional](#initializing-the-functional)
@@ -44,7 +46,20 @@ For unit testing, pylibnxc currently requires [pyscf](https://sunqm.github.io/py
 
 To unit test the C++/Fortran implementation [GoogleTest](https://github.com/google/googletest) is required.
 
+## Installation
 
+To compile Libnxc:
+
+1. Create a work directory and copy `utils/Makefile` into it (this can be done quickly with `sh config.sh`)
+1. Adjust arch.make according to your system
+1. Change into the work directory and run `make`. The default target is `make all` which will build the library `libnxc.so`
+  and if `LIBXCDIR` is set in `arch.make` will create the necessary symbolic links in your Libxc installation
+
+To install pylibnxc:
+
+pylibnxc operates independent of Libnxc and can be installed from within the root directory with
+
+`pip install -e .`
 
 
 ## Quickstart
@@ -83,11 +98,11 @@ int main()
 
 Running the program above should produce the following output:
 ```
-0.100000   -.459787
-0.200000   -.507308
-0.300000   -.562453
-0.400000   -.611107
-0.500000   -.653520
+0.1     -0.459810
+0.2     -0.507294
+0.3     -0.562470
+0.4     -0.611119
+0.5     -0.653536
 ```
 
 The same program can be run from Fortran:
@@ -168,6 +183,34 @@ The `nxc` keyword supports mixing of functionals similar to pyscf, e.g.
 `nxc ='0.25*HF + 0.75*GGA_X_PBE, GGA_C_PBE'` would correspond to a neural network version
 of PBE0.
 Currently, mixing of libxc functionals with libnxc functionals is not supported.
+
+## Using Libnxc with Libxc
+
+The simplest way to use machine learned functionals in existing electronic
+structure codes is by linking Libxc with Libnxc. This way any code that supports
+Libxc functionals (Quantum Espresso, CP2K, Vasp, Psi4, ...) has access to Libnxc routines.
+This comes with two caveats:
+1) Only grid based functionals are supported through this solution. There is currently
+no way to pass the additional information needed by Libnxc (atomic positions, unit cell size etc.)
+through Libxc.
+2) Without adjusting the electronic structure code, using Libnxc with Neural Network functionals
+may be significantly slower than calling traditional functionals. This is because some codes pass
+the density grid point by grid point. This is fine for traditional functionals, but to efficiently
+evaluate NN functionals, grid points should be processed in a vectorized fashion. Codes like
+Quantum espresso already do so, but others, like CP2K, will need to be modified to ensure efficient
+evaluation.
+
+Using Libnxc from within Libxc is straightforward:
+
+- Set the `LIBXCDIR` variable in arch.make to the
+location of the libxc `src` directory.
+- In order to be able to run unit tests using Libxc `LIBXC_INCLUDE`
+and `LIBXC_LD` need to be set accordingly.
+- From within the build directory `make libxc` will create symbolic links of the required
+Libnxc source files within the Libxc `src` directory and copy a modified `Makefile.am` that includes
+instructions to link to Libnxc. In some cases automake needs to be run in the Libxc directory.
+- After successfully compiling Libnxc, Libxc should be re-compiled to include the new functionals.
+
 
 ## C++ Interface
 
@@ -282,8 +325,8 @@ void nxc_mgga_exc_vxc(nxc_func_type* p, int np, double rho[],double sigma[], dou
 ```
 The arguments are defined in the same way as for Libxc with the notable exception that
 sigma (and accordingly vsigma) can either be the reduced gradient or the gradient of the
-density (and the corresponding potential term) depending on the parameter `gamma` in the `func_param` struct. For multidimensional arrays 
-the **fastest** index is understood to run over grid points. `int np` is the full size of the array `rho`, i.e. for spin polarized calculations (`NXC_SPIN_POLARIZED`) it is twice the number of grid points, and equal to the number of grid points for unpolarized calculations. 
+density (and the corresponding potential term) depending on the parameter `gamma` in the `func_param` struct. For multidimensional arrays
+the **fastest** index is understood to run over grid points. `int np` is the full size of the array `rho`, i.e. for spin polarized calculations (`NXC_SPIN_POLARIZED`) it is twice the number of grid points, and equal to the number of grid points for unpolarized calculations.
 
 NeuralXC functionals require special treatment, as their dependency on localized atomic orbitals produces additional
 terms when evaluating forces and stress. These corrections can be obtained with the method `nxc_lda_exc_vxc_fs`, which
@@ -431,7 +474,7 @@ If the functional type is "atomic" two additional keyword arguments can be provi
   - `do_forces`: bool, Compute the pulay force corrections. The output dict will then
   contain an entry named `'forces'`.
   - `edens`: bool, Return energy per unit particle if `True`, total energy otherwise
-  
+
 In this case, instead of providing the electron density as `'rho'` the projected density
 or ML-descriptors can be provided as `'c'`. Doing so, the density projection step
 is skipped but force corrections are not available. This might save resources for
