@@ -18,9 +18,9 @@ Thus, even simple polynomial models can be implemented and evaluated.
 While not replacing hard-coded functionals such as the ones employed by Libxc and directly by DFT codes,
 this approach provides several advantages:
 
-  - **Fast experimentation**: Functionals can be quickly implemented and used in a `plug-and-play` manner
+  - **Fast experimentation**: Functionals can be quickly implemented and used in a 'plug-and-play' manner
   - **Automatic differentiation**: PyTorch takes care of calculating all derivative terms needed in the exchange-correlation potential.
-  - **Native GPU support**: PyTorch is designed to be run on GPUs using CUDA. This extends to serialized TorchScript models, thus
+  - **Native GPU support**: PyTorch is designed to be run on GPUs using CUDA. This extends to serialized TorchScript models, therefore
     evaluating libnxc functionals on GPUs is straightforward.
 
 
