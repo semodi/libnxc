@@ -1,3 +1,5 @@
+.. _Functionals:
+
 Functionals
 =================
 

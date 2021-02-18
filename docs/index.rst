@@ -11,7 +11,7 @@ Although the primary motivation for Libnxc was to add support for neural network
 As long as the following requirements are fulfilled, models can be used by Libnxc:
 
   1. The model has to be implemented in PyTorch and serialized into a TorchScript model (e.g. with ``torch.jit.trace``)
-  2. The model input and output has to follow the form specified in ???
+  2. The model input and output has to follow the form specified in :ref:`Functionals`
 
 The serialized model is regarded as a containerized black box by Libnxc.
 Thus, even simple polynomial models can be implemented and evaluated.
