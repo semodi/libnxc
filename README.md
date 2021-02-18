@@ -1,14 +1,28 @@
+[![Documentation Status](https://readthedocs.org/projects/libnxc/badge/?version=latest)](https://libnxc.readthedocs.io/en/latest/?badge=latest)
+
 # Lib**n**xc
 
 Libnxc is a libary to use **machine learned** exchange-correlation functionals for density functional theory.
-
 All common functional types (LDA, GGA, metaGGA) as well as NeuralXC type functionals  are supported.
-
 Libnxc is written in C++ and has Fortran bindings. An implementation in Python, `pylibnxc` is also available.
-
 Libnxc is inspired by Libxc, mirroring as closely  as possible its API. In doing so, the integration of Libnxc in electronic structure codes that use Libxc should be straightforward.
-
 Libnxc can utilize multi-processing through MPI and model inference on GPUs through CUDA is supported as well.
+Although the primary motivation for Libnxc was to add support for neural network based functionals, other types of models can be used as well.
+As long as the following requirements are fulfilled, models can be used by Libnxc:
+
+  1. The model has to be implemented in PyTorch and serialized into a TorchScript model (e.g. with ``torch.jit.trace``)
+  2. The model input and output has to follow the form specified in the [Documentation](https://libnxc.readthedocs.io/en/latest/functionals.html)
+
+The serialized model is regarded as a containerized black box by Libnxc.
+Thus, even simple polynomial models can be implemented and evaluated.
+While not replacing hard-coded functionals such as the ones employed by Libxc and directly by DFT codes,
+this approach provides several advantages:
+
+  - **Fast experimentation**: Functionals can be quickly implemented and used in a `plug-and-play` manner
+  - **Automatic differentiation**: PyTorch takes care of calculating all derivative terms needed in the exchange-correlation potential.
+  - **Native GPU support**: PyTorch is designed to be run on GPUs using CUDA. This extends to serialized TorchScript models, thus
+    evaluating libnxc functionals on GPUs is straightforward.
+
 
 Table of Contents
 =================
@@ -19,16 +33,6 @@ Table of Contents
       * [Quickstart](#quickstart)
       * [Using Pylibnxc with PySCF](#using-pylibnxc-with-pyscf)
       * [Using Libnxc with Libxc](#using-libnxc-with-libxc)
-      * [C++ Interface](#c-interface)
-         * [Functional parameters](#functional-parameters)
-         * [Initializing the functional](#initializing-the-functional)
-         * [Model evaluation](#model-evaluation)
-         * [Other methods](#other-methods)
-      * [Fortran Interface](#fortran-interface)
-      * [pylibnxc](#pylibnxc)
-         * [Loading a model](#loading-a-model)
-         * [Initializing a model](#initializing-a-model)
-         * [Evaluating a model](#evaluating-a-model)
       * [Shipped functionals](#shipped-functionals)
 
 ## Dependencies
@@ -211,277 +215,6 @@ Libnxc source files within the Libxc `src` directory and copy a modified `Makefi
 instructions to link to Libnxc. In some cases automake needs to be run in the Libxc directory.
 - After successfully compiling Libnxc, Libxc should be re-compiled to include the new functionals.
 
-
-## C++ Interface
-
-### Functional parameters
-```c++
-/**
-* @param pos atomic positions
-* @param nua number of atoms
-* @param cell lattice vectors
-* @param grid number of grid points for each lattice vector
-* @param isa species index for every atom
-* @param symbols ditinct symbols
-* @param ns symbols.size()
-* @param myBox box in simulation cell (used mainly for MPI decomposition)
-* @param edens 0: return total energy, 1: return energy density  (default: 1)
-* @param add 0: set return values 1: add return values (default: 1)
-* @param cuda 0: use cpu 1: use gpu (default: 0)
-*/
-struct func_param{
-  double * pos; // atomic positions
-  int nua; // number of atoms (pos.size())
-  double * cell; // lattice vectors
-  int * grid; // number of grid points for each LV
-  int * isa; // species index for every atom  (relates to symbols array)
-  char * symbols; //distinct symbols
-  int ns; // symbols.size()
-  int * myBox; // box in simulation cell (used mainly for MPI decomposition)
-  int edens = defaults->edens;
-  int add = defaults->add;
-  int cuda = defaults->cuda;
-  int gamma = defaults->gamma;
-};
-```
-
-The struct `func_param` is used to set parameters that relate to the system that is being
-simulated as well as the way Libnxc communicates with the electronic structure code.
-Parameters `pos` to `myBox` are only relevant for atomic functionals (NeuralXC) and contain information
-about the simulation box (unit cell) as well as the atomic positions and species.
-`isa` together with `symbols` defines the element of every atom which is relevant if the NeuralXC
-functional is species dependent.
-Example:
-```c++
-int * isa = {1,0,0}
-char * symbols = {'H','O'}
-```
-would be interpreted as one oxygen atoms and two hydrogen atoms {'O','H','H'}.
-
-The remaining parameters govern the evaluation of the functional:
-- `eden`:
-  {`1`: return the energy per unit particle on a grid, (default),
-   `0`: only return the total (xc)-energy (This was mainly implemented for performance reasons)}
-- `add`:
-  {`1`: adds return values for exc and the potential terms to the provided arrays,
-   `0`: sets the return values for exc and the potential terms in the provided arrays (default)}
-- `cuda`:
-  {`1`: model inference on GPUs,
-   `0`: model inference on CPUs (default)}
-- `gamma`:
-  {`1`: for GGAs and higher, the gradient of the electron density is provided,
-   `0`: the reduced gradient sigma is provided (default)}
-
-The default values were chosen to closely mirror the functionality of Libxc.
-If Libnxc is being used with SIESTA or CP2K, appropriate values can be set with `nxc_set_code`
-```c++
-const int DEFAULT_CODE=0;
-const int SIESTA_GRID_CODE=1;
-const int SIESTA_ATOMIC_CODE=2;
-const int CP2K_CODE=0;
-
-void nxc_set_code(int code);
-```
-Note that this function has to be called *before* `nxc_func_init` to have any effect.
-
-
-### Initializing the functional
-
-The functional can be initialized using `nxc_func_init`
-```c++
-const int NXC_POLARIZED=2;
-const int NXC_UNPOLARIZED=1;
-/**
-* Initializes functional
-*
-* @param[out] p loaded functional
-* @param[in] model string containing either model path or name
-* @param[in] fp functional parameters
-* @param[in, optional] nspin spin polarized/unpolarized calcuation (default NXC_UNPOLARIZED)
-*/
-void nxc_func_init(nxc_func_type* p, std::string model, func_param fp, int nspin=NXC_UNPOLARIZED);
-```
-
-### Model evaluation
-Depending on which rung the loaded functional resides on one of the following methods can be used
-for evaluation:
-```c++
-/**
-* Evaluates the functional on provided density if functional is LDA type. This includes atomic functionals
-* that only depend on the local density.
-*
-* @param[in] p functional to evaluate
-* @param[in] np number of grid points (size of rho)
-* @param[in] rho electron density
-* @param[(in), out] exc energy density. If fp.edens = 0, exc[0] contains energy.
-* @param[(in), out] vrho dE/drho
-*/
-void nxc_lda_exc_vxc(nxc_func_type* p, int np, double rho[], double * exc, double vrho[]);
-void nxc_lda_exc_vxc_fs(nxc_func_type* p, int np, double rho[], double * exc, double vrho[],
-                        double forces[], double stress[]);
-void nxc_gga_exc_vxc(nxc_func_type* p, int np, double rho[], double sigma[], double * exc, double vrho[], double vsigma[]);
-void nxc_mgga_exc_vxc(nxc_func_type* p, int np, double rho[],double sigma[], double lapl[],
-    double tau[], double * exc, double vrho[], double vsigma[], double vlapl[],double vtau[]);
-```
-The arguments are defined in the same way as for Libxc with the notable exception that
-sigma (and accordingly vsigma) can either be the reduced gradient or the gradient of the
-density (and the corresponding potential term) depending on the parameter `gamma` in the `func_param` struct. For multidimensional arrays
-the **fastest** index is understood to run over grid points. `int np` is the full size of the array `rho`, i.e. for spin polarized calculations (`NXC_SPIN_POLARIZED`) it is twice the number of grid points, and equal to the number of grid points for unpolarized calculations.
-
-NeuralXC functionals require special treatment, as their dependency on localized atomic orbitals produces additional
-terms when evaluating forces and stress. These corrections can be obtained with the method `nxc_lda_exc_vxc_fs`, which
-should be called as the last step at the end of a converged SCF calcuation. When forces and stress aren't required
-(e.g. during the SCF loop) it suffices to call `nxc_lda_exc_vxc` to evaluate the NeuralXC functional.
-
-### Other methods
-```c++
-/**
-* Check if GPU(cuda) is available
-*/
-int nxc_cuda_available();
-void nxc_use_cuda(){
-  defaults->useCuda();
-}
-
-const int LDA_TYPE=0;
-const int GGA_TYPE=1;
-const int MGGA_TYPE=2;
-const int ATOMIC_TYPE=4;
-int nxc_func_get_family(nxc_func_type* p);
-int nxc_func_get_family_from_path(std::string model);
-```
-We provide two methods to check the type of a functional depending on whether the functional
-has already been loaded and initialized (`nxc_func_get_family`) or whether we want to
-check the functional type without loading it (`nxc_func_get_family_from_path`)
-
-
-## Fortran Interface
-The nomenclature used here strictly follows that of the C++ interface with the addition of
-`_f90` in the function names. Function signatures reflect the fact that values cannot be returned to Fortran.
-To Initialize functionals from fortran, two methods are availabl:
- - `nxc_f90_func_init_` to initialize grid based functionals (LDA, GGA, ...) for which
- only the model name/path has to be provided.
- - `nxc_f90_atmfunc_init_` to initialize NeuralXC functionals for which more information about the simulation box is required.
-
-```c++
-void nxc_f90_set_code_(int * code);
-void nxc_f90_use_cuda_();
-void nxc_f90_cuda_available(int * available);
-int nxc_f90_atmfunc_init_(double  pos[], int * nua, double  cell[], int  grid[], int isa[],
-            char symbols[], int * ns, char  modelpath[], int * pathlen, int myBox[], int* ierr);
-int nxc_f90_func_init_(char  modelpath[], int * pathlen, int * ierr);
-int nxc_f90_lda_exc_vxc_(int* np, double rho[], double exc [], double vrho[], int* ierr);
-int nxc_f90_lda_exc_vxc_fs_(int* np, double rho[], double exc[], double vrho[],
-                            double forces[], double stress[], int* ierr);
-int nxc_f90_gga_exc_vxc_(int* np, double rho[], double sigma[], double exc [],
-    double vrho[], double vsigma[], int* ierr);
-int nxc_f90_mgga_exc_vxc_(int* np, double rho[], double sigma[], double lapl[], double tau[],
-   double exc [], double vrho[], double vsigma[], double vlapl[], double vtau[], int* ierr);
-void nxc_f90_func_get_family(int * family);
-void nxc_f90_func_get_family_from_path_(char modelpath [], int * pathlen, int * family);
-```
-
-The trailing underscore in the function names is required for linking purposes and
-has to be **dropped** when calling the function from fortran.
-
-## pylibnxc
-
-### Loading a model
-```python
-def LibNXCFunctional(name, **kwargs):
-    """ Loads a Libnxc functional
-    Parameters
-    ----------
-    name, string
-        Either the name of a pre-defined functional or path to custom
-        functional (will check path first and then resort to pre-defined functional)
-    kind, string, optional {'grid', 'atomic'}
-        default: 'grid', whether functional is grid kind (LDA, GGA etc.) or
-        atomic (NeuralXC)
-
-    Returns
-    --------
-    NXCFunctional
-    """
-```
-### Initializing a model
-
-If and only if the functional is of atomic (NeuralXC) kind it needs to
-be initialized before usage. Keyword arguments passed to the initialize function are used to infer whether the calculation is done in periodic boundary conditions:
-
-- Periodic boundary conditions with euclidean grid:
-```python
-def initialize(self, **kwargs):
-    """Parameters
-    ------------------
-    unitcell, numpy.ndarray (3,3)
-    	Unitcell in bohr
-    grid, numpy.ndarray (3,)
-    	Grid points per unitcell
-    positions, numpy.ndarray (Natoms, 3)
-    	atomic positions
-    species, list string (Natoms)
-    	atomic species (chem. symbols)
-    """
-```
-
-- Non-periodic boundary conditions with custom grid:
-```python
-def initialize(self, **kwargs):
-    """Parameters
-    ------------------
-    grid_coords, numpy.ndarray (Ngrid,3)
-    	Grid point coordinates (in a.u.)
-    grid_weights, numpy.ndarray (Ngrid,)
-    	Grid point weights for integration
-    positions, numpy.ndarray (N, 3)
-    	atomic positions
-    species, list string (N)
-    	atomic species (chem. symbols)
-    """
-```
-
-### Evaluating a model
-
-The model can be evaluated by calling `compute` on a `LibNXCFunctional` instance:
-
-```python
-def compute(self, inp, do_exc=True, do_vxc=True, **kwargs):
-        """ Evaluate the functional on a given input
-
-        Parameters
-        ----------
-        inp, dict of np.ndarrays
-            Input electron density "rho" and its derivatives. Potential terms are
-            calculated for all provided derivates. (valid keys: 'rho','sigma',
-            'gamma','tau','lapl').
-        do_exc, bool, optional
-            no effect, only here for compatibility reasons
-        do_vxc, bool, optional
-            whether to compute the functional derivative(s) of the energy.
-            default: True
-
-        Returns:
-        ---------
-        output, dict
-            Dictionary containing output values:
-                - 'zk': energy per unit particle or total energy
-                - 'vrho/vsigma/vtau' : potential terms
-    """
-```
-
-If the functional type is "atomic" two additional keyword arguments can be provided:
-  - `do_forces`: bool, Compute the pulay force corrections. The output dict will then
-  contain an entry named `'forces'`.
-  - `edens`: bool, Return energy per unit particle if `True`, total energy otherwise
-
-In this case, instead of providing the electron density as `'rho'` the projected density
-or ML-descriptors can be provided as `'c'`. Doing so, the density projection step
-is skipped but force corrections are not available. This might save resources for
-codes for which analytical integrals over orbitals are available.
-
-
-
 ## Shipped functionals
 
 The following functionals were introduced in
@@ -497,6 +230,6 @@ Please consider citing the paper when using them.
 
 The following functionals are mainly included for testing purposes and should be used with care. For small molecules an accuracy of about 1 mHartree can be expected.
 
-- **GGA_PBE**: Neural Network fitted to reproduce the famous PBE functional
+- **GGA_PBE**: Neural Network fitted to reproduce the popular PBE functional
 - **GGA_X_PBE**: Exchange part of GGA_PBE
 - **GGA_C_PBE**: Correlation part of GGA_PBE
