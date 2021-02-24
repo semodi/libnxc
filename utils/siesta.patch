@@ -1,0 +1,812 @@
+diff --git a/Makefile b/Makefile
+index 33c277b..7193965 100644
+--- a/Makefile
++++ b/Makefile
+@@ -27,7 +27,7 @@ include arch.make
+ # force them to be here.
+ # Importantly these should be after the include statement.
+ # Note that this will not help the utilities.
+-.SUFFIXES: .f .f90 .F .F90 .c .o .a
++.SUFFIXES: .f .f90 .F .F90 .c .o .a .cpp
+ 
+ 
+ lib: libSiestaXC.a libfdf.a libSiestaForces.a
+@@ -84,7 +84,7 @@ OBJS =  automatic_cell.o atom_options.o \
+         born_charge.o cellxc_mod.o cgwf.o chkdim.o chkgmx.o \
+ 	chempot.o coceri.o coxmol.o cross.o compute_norm.o\
+ 	denmat.o denmatlomem.o detover.o dfscf.o diagon.o digcel.o \
+-        fft.o dhscf.o constr.o diagk_file.o \
++        fft.o neuralxc.o dhscf.o constr.o diagk_file.o \
+ 	diagg.o diagk.o diagkp.o diag2g.o diag2k.o diag3g.o diag3k.o diagpol.o \
+ 	diagsprl.o dipole.o dismin.o dnaefs.o doping_uniform.o dot.o  \
+ 	m_efield.o egandd.o ener3.o ener3lomem.o errorf.o extrapolon.o \
+@@ -162,7 +162,7 @@ OBJS =  automatic_cell.o atom_options.o \
+         rusage.o memory_snapshot.o compute_ebs_shift.o memory_all.o \
+ 	matel_registry.o register_rfs.o new_matel.o \
+ 	kpoint_convert.o \
+-	m_target_stress.o compute_max_diff.o
++	m_target_stress.o compute_max_diff.o 
+ 
+ OBJS += init_output.o
+ 
+diff --git a/SiestaXC/cellxc.F90 b/SiestaXC/cellxc.F90
+index f5a8537..a23b12b 100644
+--- a/SiestaXC/cellxc.F90
++++ b/SiestaXC/cellxc.F90
+@@ -390,6 +390,14 @@ SUBROUTINE cellXC( irel, cell, nMesh, lb1, ub1, lb2, ub2, lb3, ub3, &
+      GD(3,nSpin), k, kcell(3,3), kcut, kvec(3),  &
+      stressVDW(3,3), sumTime, sumTime2, totTime, VDWweightC, volume, &
+      XCweightC(maxFunc), XCweightVDW, XCweightX(maxFunc)
++     ! NXC variables
++     integer :: points, ierr, nxc_family
++     real(dp):: &
++        grad(1:nSpin, 0:ub1-lb1,0:ub2-lb2,0:ub3-lb3,3), &
++        nxc_epsx(0:ub1-lb1,0:ub2-lb2,0:ub3-lb3), &
++        nxc_dExdD(0:ub1-lb1,0:ub2-lb2,0:ub3-lb3,1:nSpin), &
++        nxc_dExdGD(1:nSpin, 0:ub1-lb1,0:ub2-lb2,0:ub3-lb3, 3)
++
+ #ifdef DEBUG_XC
+   integer :: iip, jjp, jq
+   real(dp):: rmod, rvec(3)
+@@ -942,6 +950,41 @@ SUBROUTINE cellXC( irel, cell, nMesh, lb1, ub1, lb2, ub2, lb3, ub3, &
+ #ifdef DEBUG_XC
+ !  call timer_start( 'cellXC3' )
+ #endif /* DEBUG_XC */
++   call nxc_f90_func_get_family(nxc_family)
++   if (nxc_family.eq.1) then
++     do i3 = 0,myMesh(3)-1   ! Mesh indexes relative to my box origin
++     do i2 = 0,myMesh(2)-1
++     do i1 = 0,myMesh(1)-1
++       ii1 = i1 + myBox(1,1) ! Mesh indexes relative to cell origin
++       ii2 = i2 + myBox(1,2)
++       ii3 = i3 + myBox(1,3)
++       call getGradDens(ii1, ii2, ii3, GD)
++       do ix = 1,3
++         do is = 1, nSpin
++           grad(is,i1,i2,i3,ix) = GD(ix,is)
++         end do
++       end do
++     end do
++     end do
++     end do
++     points = myMesh(3)*myMesh(2)*myMesh(1)
++     if (associated(myDens)) then
++       call nxc_f90_gga_exc_vxc(points, myDens, grad, nxc_epsx, nxc_dExdD, &
++             nxc_dExdGD, ierr)
++     else
++       call nxc_f90_gga_exc_vxc(points, dens, grad, nxc_epsx, nxc_dExdD, &
++             nxc_dExdGD, ierr)
++     end if
++   end if
++   if (nxc_family.eq.0) then
++       if (associated(myDens)) then
++         call nxc_f90_lda_exc_vxc(points, myDens, nxc_epsx, nxc_dExdD, &
++              ierr)
++       else
++         call nxc_f90_lda_exc_vxc(points, dens, nxc_epsx, nxc_dExdD, &
++              ierr)
++       end if
++   end if
+ 
+   ! Loop on mesh points -------------------------------------------------------
+   ip = 0
+@@ -1055,6 +1098,19 @@ SUBROUTINE cellXC( irel, cell, nMesh, lb1, ub1, lb2, ub2, lb3, ub3, &
+                     epsX, epsC, dExdD, dEcdD, dVxdD, dVcdD )
+       endif ! (VDWfunctl)
+ 
++      if (nxc_family.gt.-1.and.nxc_family.lt.4) then
++          epsX =  nxc_epsx(i1,i2,i3)
++          epsC = 0.0
++          dExdD(:) =  nxc_dExdD(i1,i2,i3,:)
++          dEcdD(:) = 0.0
++        if (nxc_family.eq.1) then
++          do ix=1,3
++            dExdGD(ix,:) =  nxc_dExdGD(:,i1,i2,i3,ix)
++            dEcdGD(ix,:) =  0.0
++          end do
++        end if
++      end if
++
+       ! Scale return values by weight for this functional
+       epsX = XCweightX(nf)*epsX
+       epsC = XCweightC(nf)*epsC
+diff --git a/SiestaXC/cellxc.diff b/SiestaXC/cellxc.diff
+new file mode 100644
+index 0000000..5f1314b
+--- /dev/null
++++ b/SiestaXC/cellxc.diff
+@@ -0,0 +1,168 @@
++4c4
++< ! subroutine cellXC( irel, cell, nMesh, lb1, ub1, lb2, ub2, lb3, ub3, 
++---
++> ! subroutine cellXC( irel, cell, nMesh, lb1, ub1, lb2, ub2, lb3, ub3,
++10c10
++< !   the Generalized-Gradient-Aproximation with the 'explicit mesh 
++---
++> !   the Generalized-Gradient-Aproximation with the 'explicit mesh
++15c15
++< ! Wrtten by J.M.Soler using algorithms developed by 
++---
++> ! Wrtten by J.M.Soler using algorithms developed by
++30c30
++< ! real(grid_p) dens(lb1:ub1,lb2:ub2,lb3:ub3,nSpin) : Total (nSpin=1) or 
++---
++> ! real(grid_p) dens(lb1:ub1,lb2:ub2,lb3:ub3,nSpin) : Total (nSpin=1) or
++69c69
++< !   real(dp) :: cell(3,3), Dc, Dx, Ec, Ex, stress(3,3), 
++---
++> !   real(dp) :: cell(3,3), Dc, Dx, Ec, Ex, stress(3,3),
++84c84
++< !   real(dp) :: cell(3,3), Dc, Dx, Ec, Ex, stress(3,3), 
++---
++> !   real(dp) :: cell(3,3), Dc, Dx, Ec, Ex, stress(3,3),
++108,109c108,109
++< ! IMPORTANT: arrays dens, Vxc, and dVxcdD may be alternatively 
++< ! allocated and initialized with indexes beginning in 0 or 1, 
++---
++> ! IMPORTANT: arrays dens, Vxc, and dVxcdD may be alternatively
++> ! allocated and initialized with indexes beginning in 0 or 1,
++130c130
++< ! The processor mesh boxes must not overlap, and they must cover the 
++---
++> ! The processor mesh boxes must not overlap, and they must cover the
++142c142
++< ! Routines called: 
++---
++> ! Routines called:
++196c196
++< ! XCfunc: 
++---
++> ! XCfunc:
++202c202
++< !           'PW91' => GGA Perdew & Wang, JCP, 100, 1290 (1994) 
++---
++> !           'PW91' => GGA Perdew & Wang, JCP, 100, 1290 (1994)
++285d284
++< 
++302c301
++<   real(gp),intent(out):: Vxc(0:ub1-lb1,0:ub2-lb2,0:ub3-lb3,1:nSpin) 
++---
++>   real(gp),intent(out):: Vxc(0:ub1-lb1,0:ub2-lb2,0:ub3-lb3,1:nSpin)
++305c304
++<                          dVxcdD(0:ub1-lb1,0:ub2-lb2,0:ub3-lb3,1:nSpin**2) 
++---
++>                          dVxcdD(0:ub1-lb1,0:ub2-lb2,0:ub3-lb3,1:nSpin**2)
++389c388
++<      EcuspVDW, Enl, epsC, epsCusp, epsNL, epsX, f1, f2, &  
++---
++>      EcuspVDW, Enl, epsC, epsCusp, epsNL, epsX, f1, f2, &
++392a392,400
++> 
++>   ! NXC variables
++>   integer :: points, ierr, nxc_family
++>   real(dp):: &
++>      grad(1:nSpin, 0:ub1-lb1,0:ub2-lb2,0:ub3-lb3,3), &
++>      nxc_epsx(0:ub1-lb1,0:ub2-lb2,0:ub3-lb3), &
++>      nxc_dExdD(0:ub1-lb1,0:ub2-lb2,0:ub3-lb3,1:nSpin), &
++>      nxc_dExdGD(1:nSpin, 0:ub1-lb1,0:ub2-lb2,0:ub3-lb3, 3)
++> 
++487c495
++<     ! Copy density to my box 
++---
++>     ! Copy density to my box
++581c589
++<       else if (ic==2) then 
++---
++>       else if (ic==2) then
++737c745
++<       ii1 = i1 + myBox(1,1)  
++---
++>       ii1 = i1 + myBox(1,1)
++741c749
++<       ! Find density at this point. Notice that mesh indexes of dens and myDens 
++---
++>       ! Find density at this point. Notice that mesh indexes of dens and myDens
++865c873
++< !        ! Factor 0.5 in the integral cancels with a factor 2 required 
++---
++> !        ! Factor 0.5 in the integral cancels with a factor 2 required
++867c875
++< !        ! of the Fourier components (see fftr2k) 
++---
++> !        ! of the Fourier components (see fftr2k)
++945a954,988
++>   call nxc_f90_func_get_family(nxc_family)
++>   if (nxc_family.eq.1) then
++>     do i3 = 0,myMesh(3)-1   ! Mesh indexes relative to my box origin
++>     do i2 = 0,myMesh(2)-1
++>     do i1 = 0,myMesh(1)-1
++>       ii1 = i1 + myBox(1,1) ! Mesh indexes relative to cell origin
++>       ii2 = i2 + myBox(1,2)
++>       ii3 = i3 + myBox(1,3)
++>       call getGradDens(ii1, ii2, ii3, GD)
++>       do ix = 1,3
++>         do is = 1, nSpin
++>           grad(is,i1,i2,i3,ix) = GD(ix,is)
++>         end do
++>       end do
++>     end do
++>     end do
++>     end do
++>     points = myMesh(3)*myMesh(2)*myMesh(1)
++>     if (associated(myDens)) then
++>       call nxc_f90_gga_exc_vxc(points, myDens, grad, nxc_epsx, nxc_dExdD, &
++>             nxc_dExdGD, ierr)
++>     else
++>       call nxc_f90_gga_exc_vxc(points, dens, grad, nxc_epsx, nxc_dExdD, &
++>             nxc_dExdGD, ierr)
++>     end if
++>   end if
++>   if (nxc_family.eq.0) then
++>       if (associated(myDens)) then
++>         call nxc_f90_lda_exc_vxc(points, myDens, nxc_epsx, nxc_dExdD, &
++>              ierr)
++>       else
++>         call nxc_f90_lda_exc_vxc(points, dens, nxc_epsx, nxc_dExdD, &
++>              ierr)
++>       end if
++>   end if
++955c998
++<     ! Find density at this point. Notice that mesh indexes of dens and myDens 
++---
++>     ! Find density at this point. Notice that mesh indexes of dens and myDens
++989c1032
++<       ! Find exchange and correlation energy densities and their 
++---
++>       ! Find exchange and correlation energy densities and their
++1071a1115,1127
++>       if (nxc_family.gt.-1.and.nxc_family.lt.4) then
++>           epsX =  nxc_epsx(i1,i2,i3)
++>           epsC = 0.0
++>           dExdD(:) =  nxc_dExdD(i1,i2,i3,:)
++>           dEcdD(:) = 0.0
++>         if (nxc_family.eq.1) then
++>           do ix=1,3
++>             dExdGD(ix,:) =  nxc_dExdGD(:,i1,i2,i3,ix)
++>             dEcdGD(ix,:) =  0.0
++>           end do
++>         end if
++>       end if
++> 
++1123c1179
++<             else if (ic==2) then 
++---
++>             else if (ic==2) then
++1194c1250
++<       else if (ic==2) then 
++---
++>       else if (ic==2) then
++1370c1426
++<   !   dens, Dleft1, Dleft2, Dleft3, 
++---
++>   !   dens, Dleft1, Dleft2, Dleft3,
++1402c1458
++<       else if (ic==2) then 
++---
++>       else if (ic==2) then
+diff --git a/dhscf.F b/dhscf.F
+index 6d36134..03633de 100644
+--- a/dhscf.F
++++ b/dhscf.F
+@@ -122,6 +122,7 @@
+       use m_ts_options,   only : IsVolt, N_Elec, Elecs
+       use m_ts_voltage,   only : ts_init_voltage
+       use m_ts_hartree,   only : ts_init_hartree_fix
++      use neuralXC    ,   only : init_nxc
+ 
+       implicit none
+       integer, intent(in)     :: nspin, norb, iaorb(norb), iphorb(norb),
+@@ -515,6 +516,7 @@ C ----------------------------------------------------------------------
+       end if
+ 
+       frstme = .false.
++      call init_nxc(xa, na, nua, indxua, ucell, ntm, isa, dvol)
+ 
+       call timer( 'DHSCF_Init', 2 )
+ #ifdef DEBUG
+@@ -690,7 +692,7 @@ C     Modules
+       use m_ts_options, only: IsVolt, Elecs, N_elec
+       use m_ts_voltage, only: ts_voltage
+       use m_ts_hartree, only: ts_hartree_fix
+-
++      use neuralXC, only : cellNXC
+       implicit none
+ 
+       integer
+@@ -1555,6 +1557,8 @@ C ----------------------------------------------------------------------
+      .                           myBox(1,2), myBox(2,2),
+      .                           myBox(1,3), myBox(2,3), nspin,
+      .             DRho, Ex, Ec, DEx, DEc, stressXC, Vscf )
++      call cellNXC(Vscf, Drho, ntpl, Ex, Fal, stressXC, ifa)
++
+ #else /* BSC_CELLXC */
+ 
+       if (nodes.gt.1) then
+diff --git a/dhscf.diff b/dhscf.diff
+new file mode 100644
+index 0000000..59a716d
+--- /dev/null
++++ b/dhscf.diff
+@@ -0,0 +1,349 @@
++1c1
++< ! 
++---
++> !
++17,18c17,18
++< !  change does not involve a cell change. The reason is to avoid 
++< !  complexity, since now the mesh parallel distributions will depend on 
++---
++> !  change does not involve a cell change. The reason is to avoid
++> !  complexity, since now the mesh parallel distributions will depend on
++124a125
++>       use neuralXC, only : init_nxc
++136c137
++<       real(dp), parameter     :: tiny  = 1.e-12_dp 
++---
++>       real(dp), parameter     :: tiny  = 1.e-12_dp
++170c171
++<          
++---
++> 
++234c235
++< C     Mesh initialization 
++---
++> C     Mesh initialization
++236c237
++<       call InitMesh( na, cell, norb, iaorb, iphorb, isa, rmax, 
++---
++>       call InitMesh( na, cell, norb, iaorb, iphorb, isa, rmax,
++264c265
++< C     End of mesh initialization 
++---
++> C     End of mesh initialization
++322,323c323,324
++<       call NeutralAtomOnMesh( na, isa, ntpl, Vna, indxua, dvol, 
++<      &                        volume, dummy_DRho, Fal, stressl, 
++---
++>       call NeutralAtomOnMesh( na, isa, ntpl, Vna, indxua, dvol,
++>      &                        volume, dummy_DRho, Fal, stressl,
++340c341
++< C       Compute atom positions for the second data distribution 
++---
++> C       Compute atom positions for the second data distribution
++346c347
++< !     in the UNIFORM distribution 
++---
++> !     in the UNIFORM distribution
++371c372
++<         call CreateLocalDscfPointers( nmpl, nuotot, numd, listdptr, 
++---
++>         call CreateLocalDscfPointers( nmpl, nuotot, numd, listdptr,
++404c405
++<         if (doping_active) then  
++---
++>         if (doping_active) then
++444c445
++<       ! Check if we need to add the potential 
++---
++>       ! Check if we need to add the potential
++454c455
++<          ! We do not allow the electric field for 
++---
++>          ! We do not allow the electric field for
++458c459
++<            
++---
++> 
++466c467
++<             
++---
++> 
++505c506
++<          
++---
++> 
++508c509
++<         ! corner cases that may require dipole corrections, or 
++---
++>         ! corner cases that may require dipole corrections, or
++514c515
++<          
++---
++> 
++518a520
++>       call init_nxc(xa, na, nua, indxua, ucell, ntm, isa, dvol)
++526c528
++<       subroutine dhscf( nspin, norb, iaorb, iphorb, nuo, 
++---
++>       subroutine dhscf( nspin, norb, iaorb, iphorb, nuo,
++531c533
++<      &                  Enaatm, Enascf, Uatm, Uscf, DUscf, DUext, 
++---
++>      &                  Enaatm, Enascf, Uatm, Uscf, DUscf, DUext,
++577c579
++< C                             DeltaV = Vna + Vxc(SCF) + 
++---
++> C                             DeltaV = Vna + Vxc(SCF) +
++658a661
++>       use neuralXC, only : cellNXC
++676c679
++<       
++---
++> 
++697c700
++<      &  maxnd, maxnh, nua, na, norb, nspin, nuo, nuotot, 
++---
++>      &  maxnd, maxnh, nua, na, norb, nspin, nuo, nuotot,
++699c702
++<      &  indxua(na), iphorb(norb), isa(na), 
++---
++>      &  indxua(na), iphorb(norb), isa(na),
++800,803c803,806
++<      &  dipole, 
++<      &  poison, 
++<      &  reord, rhooda, rhoofdsp, 
++<      &  timer, vmatsp, 
++---
++>      &  dipole,
++>      &  poison,
++>      &  reord, rhooda, rhoofdsp,
++>      &  timer, vmatsp,
++840c843
++<       
++---
++> 
++869c872
++<       
++---
++> 
++875c878
++<       
++---
++> 
++882c885
++<            call write_rho( filesOut%vna, 
++---
++>            call write_rho( filesOut%vna,
++943c946
++<      &                 'DRho_par','dhscf' )       
++---
++>      &                 'DRho_par','dhscf' )
++950c953
++<      &                 nspin, Dscf, DRho_par, 
++---
++>      &                 nspin, Dscf, DRho_par,
++1019c1022
++<      &                 'DRho_quad','dhscf' )       
++---
++>      &                 'DRho_quad','dhscf' )
++1034c1037
++<      .                  nspin, iaorb, iphorb, 
++---
++>      .                  nspin, iaorb, iphorb,
++1082c1085
++< C       Save diffuse ionic charge 
++---
++> C       Save diffuse ionic charge
++1102c1105
++< C       Save total (ionic+electronic) charge 
++---
++> C       Save total (ionic+electronic) charge
++1115c1118
++< !$OMP do 
++---
++> !$OMP do
++1119c1122
++< !$OMP end do 
++---
++> !$OMP end do
++1130c1133
++<               call write_grid_netcdf( cell, ntm, 1, ntpl, Chlocal, 
++---
++>               call write_grid_netcdf( cell, ntm, 1, ntpl, Chlocal,
++1139c1142
++<         end if 
++---
++>         end if
++1146c1149
++<       
++---
++> 
++1175c1178
++<            call write_grid_netcdf( cell, ntm, nspin, ntpl, DRho, 
++---
++>            call write_grid_netcdf( cell, ntm, nspin, ntpl, DRho,
++1186c1189
++<       if (present(charge_density_only)) then 
++---
++>       if (present(charge_density_only)) then
++1197,1198c1200,1201
++<       
++<         if (analyze_charge_density_only) then 
++---
++> 
++>         if (analyze_charge_density_only) then
++1221,1222c1224,1225
++< C where there are atoms (i.e., not in vacuum).          
++< C First, call with 'task=0' to add background charge    
++---
++> C where there are atoms (i.e., not in vacuum).
++> C First, call with 'task=0' to add background charge
++1225c1228
++<       
++---
++> 
++1306c1309
++<           
++---
++> 
++1329c1332
++<       
++---
++> 
++1337c1340
++< C     using the original data distribution 
++---
++> C     using the original data distribution
++1341c1344
++< !$OMP parallel do default(shared), private(ip), 
++---
++> !$OMP parallel do default(shared), private(ip),
++1423c1426
++<          call write_grid_netcdf( cell, ntm, 1, ntpl, Vaux, 
++---
++>          call write_grid_netcdf( cell, ntm, 1, ntpl, Vaux,
++1446c1449
++<            call write_grid_netcdf( cell, ntm, 1, ntpl, Vaux, 
++---
++>            call write_grid_netcdf( cell, ntm, 1, ntpl, Vaux,
++1476c1479
++<       call jms_setMeshDistr( distrID=JDGdistr, nMesh=ntm, 
++---
++>       call jms_setMeshDistr( distrID=JDGdistr, nMesh=ntm,
++1487c1490
++<          
++---
++> 
++1519c1522
++<            call write_grid_netcdf( cell, ntm, nspin, ntpl, DRho, 
++---
++>            call write_grid_netcdf( cell, ntm, nspin, ntpl, DRho,
++1525c1528
++<         call write_grid_netcdf( cell, ntm, nspin, ntpl, DRho, 
++---
++>         call write_grid_netcdf( cell, ntm, nspin, ntpl, DRho,
++1557a1561,1563
++> 
++>       call cellNXC(Vscf, Drho, ntpl, Ex, Fal, stressXC, ifa)
++> 
++1576,1577c1582,1583
++<       
++<       
++---
++> 
++> 
++1591c1597
++< !     Now we add up the other contributions to it, at 
++---
++> !     Now we add up the other contributions to it, at
++1600c1606
++<               DRho(ip,ispin) = DRho(ip,ispin) - 
++---
++>               DRho(ip,ispin) = DRho(ip,ispin) -
++1628c1634
++<         else 
++---
++>         else
++1631c1637
++<            call write_grid_netcdf( cell, ntm, nspin, ntpl, Vscf, 
++---
++>            call write_grid_netcdf( cell, ntm, nspin, ntpl, Vscf,
++1646c1652
++<         forall(ispin=1:nsd) 
++---
++>         forall(ispin=1:nsd)
++1648c1654
++<         call vacuum_level( ntpl, nspin, DRho, Vscf, 
++---
++>         call vacuum_level( ntpl, nspin, DRho, Vscf,
++1650c1656
++<         forall(ispin=1:nsd) 
++---
++>         forall(ispin=1:nsd)
++1652,1653c1658,1659
++<         if (np_vac>0 .and. Node==0) print'(/,a,2f12.6,a)', 
++<      .    'dhscf: Vacuum level (max, mean) =', 
++---
++>         if (np_vac>0 .and. Node==0) print'(/,a,2f12.6,a)',
++>      .    'dhscf: Vacuum level (max, mean) =',
++1762c1768
++<    
++---
++> 
++1781c1787
++<           call forhar( ntpl, nspin, nml, ntml, ntm, npcc, cell, 
++---
++>           call forhar( ntpl, nspin, nml, ntml, ntm, npcc, cell,
++1783c1789
++<           call forhar( ntpl, nspin, nml, ntml, npcc, cell, 
++---
++>           call forhar( ntpl, nspin, nml, ntml, npcc, cell,
++1805,1806c1811,1812
++<         call NeutralAtomOnMesh( na, isa, ntpl, Vna, indxua, dvol, 
++<      &                          volume, DRho, Fal, stressl, 
++---
++>         call NeutralAtomOnMesh( na, isa, ntpl, Vna, indxua, dvol,
++>      &                          volume, DRho, Fal, stressl,
++1831c1837
++<      &              indxua, isa, iaorb, iphorb, 
++---
++>      &              indxua, isa, iaorb, iphorb,
++1913c1919
++<       
++---
++> 
++1918,1919d1923
++<       
++<       want_partial_charges = (hirshpop .or. voropop) 
++1921c1925,1927
++<       if (saverho)   filesOut%rho   = trim(slabel)//'.RHO' 
++---
++>       want_partial_charges = (hirshpop .or. voropop)
++> 
++>       if (saverho)   filesOut%rho   = trim(slabel)//'.RHO'
++1924,1926c1930,1932
++<       if (savevh)    filesOut%vh    = trim(slabel)//'.VH'  
++<       if (savevt)    filesOut%vt    = trim(slabel)//'.VT'  
++<       if (savevna)   filesOut%vna   = trim(slabel)//'.VNA' 
++---
++>       if (savevh)    filesOut%vh    = trim(slabel)//'.VH'
++>       if (savevt)    filesOut%vt    = trim(slabel)//'.VT'
++>       if (savevna)   filesOut%vna   = trim(slabel)//'.VNA'
++1929c1935
++<       
++---
++> 
++1931c1937
++<       
++---
++> 
++1949c1955
++<       integer                  :: isigneikr, 
++---
++>       integer                  :: isigneikr,
++1951,1952c1957,1958
++<      &                            iaorb(*), iphorb(*), isa(*), 
++<      &                            numd(nuo),     
++---
++>      &                            iaorb(*), iphorb(*), isa(*),
++>      &                            numd(nuo),
+diff --git a/neuralxc.F90 b/neuralxc.F90
+new file mode 100644
+index 0000000..b228809
+--- /dev/null
++++ b/neuralxc.F90
+@@ -0,0 +1,127 @@
++MODULE neuralxc
++
++  use precision
++  use fdf
++
++  implicit none
++
++  logical   :: use_neuralxc = .false.
++  real(dp)  :: Vcell
++  PUBLIC:: cellNXC, init_nxc
++
++CONTAINS
++
++  SUBROUTINE init_nxc(xa, na, nua, indxua, ucell, grid, isa, dvol)
++
++
++      use parallel, only : ProcessorY
++      use mesh,     only : nsm
++      use siestaXC, only : jms_setMeshDistr => setMeshDistr
++      use siestaXC, only : myMeshBox    ! Returns my processor mesh box
++      use atm_types, only: species
++#ifdef MPI
++      use mpi_siesta
++#endif
++
++      integer,  intent(in)    :: na
++      integer,  intent(in)    :: nua
++      integer,  intent(in)   :: indxua(na)
++      real(dp), intent(in)    :: xa(3,na), ucell(3,3)
++      integer,  intent(in)    :: grid(3)
++      integer,  intent(in)    :: isa(na) ! Species index for each atom
++      real(dp),  intent(in)    :: dvol
++
++
++      integer, save :: JDGdistr=-1
++      character(len=2)      :: nxc_symbols(na)
++      integer               :: ispec, ierr
++      character(len=100)    :: nxc_path
++      integer               :: MPIRank
++      integer               :: myBox(2,3)
++      real(dp)              :: xua(3,nua)
++      integer               :: isua(nua) ! Species index for each atom in uc
++      logical               :: cuda=.false.
++      integer               :: cuda_int, nxc_family, code
++
++      Vcell = dvol
++      nxc_path = fdf_get('NeuralXC','')
++      cuda = fdf_get('NeuralXC.cuda',.false.)
++      if (cuda) then
++           call nxc_f90_use_cuda()
++      end if
++
++      if (nxc_path .ne. '') then
++
++        use_neuralxc = .true.
++        do ispec = 1, na
++          nxc_symbols(isa(ispec)) = species(isa(ispec))%symbol
++        end do
++        do ispec = 1, na
++          if (indxua(ispec).eq.ispec) then
++            xua(:, ispec) = xa(:, ispec)
++            isua(ispec) = isa(ispec)
++          end if
++        end do
++        ! 'Teach' C++ about required MPI types and routines
++#ifdef MPI
++        call init_nxc_mpi(MPI_Comm_World, MPI_SUM, MPI_MAX, &
++          MPI_double_precision, MPI_INTEGER)
++#endif
++        call jms_setMeshDistr( distrID=JDGdistr, nMesh=grid, &
++                          nNodesX=1, nNodesY=ProcessorY, nBlock=nsm )
++        call myMeshBox( grid, JDGdistr, myBox )
++
++        
++        call nxc_f90_func_get_family_from_path(nxc_path, LEN_TRIM(nxc_path), nxc_family)
++        if (nxc_family.eq.1) then
++          call nxc_f90_set_code(1) 
++          call nxc_f90_func_init(nxc_path, LEN_TRIM(nxc_path), ierr)
++        else if (nxc_family.eq.4) then
++          call nxc_f90_set_code(2) 
++          call nxc_f90_atmfunc_init(xua ,nua, ucell, grid, isua, nxc_symbols, &
++                    size(species), nxc_path, LEN_TRIM(nxc_path), myBox, ierr)
++        end if
++        
++      end if
++  END SUBROUTINE init_nxc
++
++  SUBROUTINE cellNXC(Vscf, Drho, ntpl, Ex, Fal, stressXC, ifa)
++
++#ifdef MPI
++      use mpi_siesta
++#endif
++      real(grid_p), intent(inout) :: Vscf(:,:), Drho(:,:)
++      integer, intent(in)         :: ntpl, ifa
++      real(dp), intent(inout)     :: Ex
++      real(dp), intent(inout)     :: Fal(:,:)
++      real(dp), intent(inout)     :: stressXC(3,3)
++      real(dp)                    :: e_incr
++      real(dp)                    :: e_incr_glob
++      integer                     :: ierr
++      integer                     :: ip, ierror, family
++      logical                     :: correct_forces
++
++      Fal(:,:) = Fal(:,:)/2.0
++      stressXC(:,:) = stressXC(:,:)/2.0
++      Vscf(:,1) = Vscf(:,1)/2
++      Ex = Ex/2
++
++      correct_forces = fdf_get('NeuralXC.force',.true.)
++      if (use_neuralxc) then
++        call nxc_f90_func_get_family(family)
++        if (family.eq.4) then
++          if (ifa.eq.1.and.correct_forces) then
++            call nxc_f90_lda_exc_vxc_fs(ntpl, DRho(:,1), Ex, Vscf, Fal, stressXC, ierr)
++          else
++            call nxc_f90_lda_exc_vxc(ntpl, DRho(:,1), Ex, Vscf, ierr)
++          end if
++        end if
++      end if
++      Ex = Ex*2
++      Vscf(:,1) = Vscf(:,1)*2.0
++      Fal(:,:) = Fal(:,:)*2.0
++      stressXC(:,:) = stressXC(:,:)*2.0
++
++  END SUBROUTINE cellNXC
++
++END MODULE neuralxc

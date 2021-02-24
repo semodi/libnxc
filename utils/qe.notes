@@ -1,0 +1,1 @@
+In make.inc, modify LD_LIBS to link to libnxc (-lnxc). 
