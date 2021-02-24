@@ -23,7 +23,7 @@ rmdir workdir
 ortho=$(grep 'siesta: *. Total' ice_ortho.out | awk '{printf "%.5f", $4}')
 hex=$(grep 'siesta: *. Total' ice_hex.out | awk '{printf "%.5f", 2*$4}')
 echo "${ortho} ${hex}"  | awk '{printf("Delta E: %.5f\n", $1-$2)}'
-echo "${ortho} ${hex}"  | awk '{printf("%s\n", $1-$2 < 0.003 ? "\033[92m Energies match \033[0m": " \033[91m Energies do not match \033[0m")}'
+echo "${ortho} ${hex}"  | awk '{printf("%s\n", ($1-$2)*($1-$2) < 0.003*0.003 ? "\033[92m Energies match \033[0m": " \033[91m Energies do not match \033[0m")}'
 echo ""
 
 echo "============ Computed stress (ortho) ==========="
