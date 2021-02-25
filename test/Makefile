@@ -1,4 +1,4 @@
-.SUFFIXES: .o .F90 .f90 .F .f .a 
+.SUFFIXES: .o .F90 .f90 .F .f .a
 
 default: test
 
@@ -8,7 +8,15 @@ include $(ARCH_MAKE)
 #
 #
 
+CPPFLAGS+=-DLIBXC $(LIBXC_INCLUDE)
+LDFLAGS+=$(LIBXC_LD) -lm
+
 test: test_fort test_c test_c_gga test_fort_gga clean
+
+libxc: test_libxc.o
+	$(CXX) test_libxc.o ../libnxc.so $(LDFLAGS) -o test_libxc
+	@echo "Testing libxc"
+	@./test_libxc
 
 test_fort: test_fort.o
 	$(FC) test_fort.o ../libnxc.so -o test_fort
@@ -30,16 +38,23 @@ test_c_gga: test_c_gga.o
 	@echo "Testing PBE model in C++"
 	@./test_c_gga
 
-test_fort.o: 
+test_fort.o:
 	$(FC) -c test_fort.f
 
-test_fort_gga.o: 
+test_fort_gga.o:
 	$(FC) -c test_fort_gga.f
-test_c.o: 
-	$(CXX) -c test_c.cpp -I$(TORCH) -I../src/
 
-test_c_gga.o: 
-	$(CXX) -c test_c_gga.cpp -I$(TORCH) -I../src/
+# test_c.o:
+# 	$(CXX) -c test_c.cpp -I$(TORCH) -I../src/
+#
+# test_c_gga.o:
+# 	$(CXX) -c test_c_gga.cpp -I$(TORCH) -I../src/
+#
+# test_libxc.o:
+# 	$(CXX) $(CPPFLAGS) -c test_libxc.cpp
+
+.cpp.o:
+	$(CXX) $(CPPFLAGS) -I/usr/local/include/ -I$(TORCH) -I../src/ $< -c
 
 clean:
 	@rm -f *.o
@@ -47,6 +62,4 @@ clean:
 	@rm -f test_c
 	@rm -f test_c_gga
 	@rm -f test_fort_gga
-
-
-
+	@rm -f test_libxc

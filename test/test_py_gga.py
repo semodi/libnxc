@@ -4,7 +4,7 @@ import numpy as np
 
 if __name__ == '__main__':
 
-    func = LibNXCFunctional("GGA_PBE")
+    func = LibNXCFunctional("GGA_XC_PBE")
     rho = np.array([0.1, 0.2, 0.3, 0.4, 0.5])
     sigma = np.array([0.2, 0.3, 0.4, 0.5, 0.6])
 

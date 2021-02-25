@@ -28,7 +28,7 @@
   !    call nxc_f90_atmfunc_init(xua ,nua, ucell, grid, isua, nxc_symbols, &
   !      1,nxc_path, LEN_TRIM(nxc_path), myBox, ierr)
 
-      nxc_path='GGA_PBE'
+      nxc_path='GGA_XC_PBE'
       call nxc_f90_set_code(0)
       call nxc_f90_func_init(nxc_path, LEN_TRIM(nxc_path), ierr)
 

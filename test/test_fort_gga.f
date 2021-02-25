@@ -5,7 +5,7 @@
       character(len=100)    :: nxc_path
       real(8)               :: rho(5), sigma(5), exc(5), vrho(5), vsigma(5)
       ! Initialize grid, basis, etc.
-      nxc_path='GGA_PBE'
+      nxc_path='GGA_XC_PBE'
 
       rho = (/0.1,0.2,0.3,0.4,0.5/)
       sigma = (/0.2,0.3,0.4,0.5,0.6/)

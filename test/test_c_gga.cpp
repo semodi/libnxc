@@ -4,18 +4,18 @@
 int main()
 {
   nxc_func_type p;
-  func_param fp; 
+  func_param fp;
   int nspin = NXC_UNPOLARIZED;
-  
+
   double rho[5] = {0.1, 0.2, 0.3, 0.4, 0.5};
   double sigma[5] = {0.2, 0.3, 0.4, 0.5, 0.6};
   double exc[5];
-  
+
   double vrho[5];
   double vsigma[5];
-  
-  nxc_func_init(&p, "GGA_PBE", fp, nspin);
-  
+
+  nxc_func_init(&p, "GGA_XC_PBE", fp, nspin);
+
   nxc_gga_exc_vxc(&p, 5, rho, sigma, exc, vrho, vsigma);
 
 
