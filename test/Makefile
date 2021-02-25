@@ -13,7 +13,9 @@ LDFLAGS+=$(LIBXC_LD) -lm
 
 test: test_fort test_c test_c_gga test_fort_gga clean
 
-libxc: test_libxc.o
+libxc: t_libxc clean 
+	
+t_libxc: test_libxc.o 
 	$(CXX) test_libxc.o ../libnxc.so $(LDFLAGS) -o test_libxc
 	@echo "Testing libxc"
 	@./test_libxc
@@ -62,4 +64,4 @@ clean:
 	@rm -f test_c
 	@rm -f test_c_gga
 	@rm -f test_fort_gga
-	@rm -f test_libxc
+	@rm  test_libxc
