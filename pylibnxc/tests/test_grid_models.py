@@ -7,7 +7,7 @@ test_dir = os.path.dirname(os.path.abspath(__file__))
 
 
 def test_pbe():
-    func = LibNXCFunctional("GGA_PBE")
+    func = LibNXCFunctional("GGA_XC_PBE")
     rho = np.array([0.1, 0.2, 0.3, 0.4, 0.5])
     sigma = np.array([0.2, 0.3, 0.4, 0.5, 0.6])
 
@@ -19,9 +19,11 @@ def test_pbe():
     # np.save('pbe_expected_output.npy',stacked)
     assert np.allclose(np.load(test_dir + '/pbe_expected_output.npy'), stacked)
 
+def test_absolute_path():
+    func = LibNXCFunctional(test_dir + "/../../models/GGA_XC_PBE")
 
 def test_pbe_gamma():
-    func = LibNXCFunctional("GGA_PBE")
+    func = LibNXCFunctional("GGA_XC_PBE")
     rho = np.array([0.1, 0.2, 0.3, 0.4, 0.5])
     sigma = np.array([0.2, 0.3, 0.4, 0.5, 0.6])
     gamma = np.sqrt(sigma)
