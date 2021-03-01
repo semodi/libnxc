@@ -11,7 +11,7 @@
 static void
 mgga_nxc_init(xc_func_type *p)
 {
-  nxc_c_xc_init(p->info->number);
+  nxc_c_xc_init(p->info->number, p->nspin);
 }
 
 

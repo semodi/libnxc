@@ -12,7 +12,7 @@
 static void
 gga_nxc_init(xc_func_type *p)
 {
-  nxc_c_xc_init(p->info->number);
+  nxc_c_xc_init(p->info->number, p->nspin);
 }
 
 const xc_func_info_type xc_func_info_gga_xc_npbe = {
