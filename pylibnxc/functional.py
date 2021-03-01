@@ -61,6 +61,12 @@ class NXCFunctional(ABC):
                     path))
         self.energy_model =\
                  torch.jit.load(path + '/xc')
+
+        if os.path.exists(path + '/omega'):
+            self.omega = np.genfromtxt(path +'/omega').tolist()
+        else:
+            self.omega = []
+            
         self.safe_mode = True
 
     def initialize(self):
@@ -121,6 +127,9 @@ class GridFunc(NXCFunctional):
         if 'tau' in inp:
             tau = torch.from_numpy(inp['tau'])
             inputs.append(tau)
+        if 'U' in inp:
+            U = torch.from_numpy(inp['U'])
+            inputs.append(U)
 
         if do_vxc:
             for idx, _ in enumerate(inputs):
@@ -134,12 +143,18 @@ class GridFunc(NXCFunctional):
                 sigma_a, sigma_ab, sigma_b = drho + self._gamma_eps
             if 'tau' in inp:
                 tau_a, tau_b = tau
+            if 'U' in inp:
+                nl_a, nl_b = U
+
+
         else:
             rho0_a = rho0_b = rho0 * 0.5
             if 'sigma' in inp and not 'gamma' in inp:
                 sigma_a = sigma_b = sigma_ab = drho * 0.25 + self._gamma_eps
             if 'tau' in inp:
                 tau_a = tau_b = tau * 0.5
+            if 'U' in inp:
+                nl_a = nl_b = U*0.5
 
         torch_inputs.append(rho0_a.unsqueeze(-1))
         torch_inputs.append(rho0_b.unsqueeze(-1))
@@ -154,6 +169,9 @@ class GridFunc(NXCFunctional):
                 tau_b.unsqueeze(-1)))  # even though not used
             torch_inputs.append(tau_a.unsqueeze(-1))
             torch_inputs.append(tau_b.unsqueeze(-1))
+        if 'U' in inp:
+            torch_inputs.append(nl_a)
+            torch_inputs.append(nl_b)
 
         torch_inputs = torch.cat(torch_inputs, dim=-1)
         exc = self.energy_model(torch_inputs)[:, 0]
@@ -175,6 +193,8 @@ class GridFunc(NXCFunctional):
                 outputs['vgamma'] = drho.grad.detach().numpy()
             if 'tau' in inp:
                 outputs['vtau'] = tau.grad.detach().numpy().T
+            if 'U' in inp:
+                outputs['vU'] = U.grad.detach().numpy()
 
         if self.safe_mode:
             for key in outputs:

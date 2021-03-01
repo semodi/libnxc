@@ -105,12 +105,10 @@ def test_nn_pbe(name, funcname):
     # nxc_path = 'PBE_GGA'
     func = {
         'PBE_X': ['GGA_X_PBE', 'GGA_X_PBE'],
-        'PBE': ['GGA_PBE', 'PBE'],
+        'PBE': ['GGA_XC_PBE', 'PBE'],
         'PBE_comp': ['GGA_X_PBE, GGA_C_PBE', 'PBE'],
         'PBE0': ['0.75*GGA_X_PBE+0.25*HF,GGA_C_PBE', 'PBE0'],
-        'SCAN': ['MGGA_SCAN2', 'SCAN'],
-        'revTPSS_X': ['MGGA_X_REVTPSS','MGGA_X_REVTPSS'],
-        'revTPSS': ['MGGA_XC_REVTPSS','REVTPSS'],
+        'SCAN': ['MGGA_XC_SCAN', 'SCAN']
     }[funcname]
     nxc_path = func[0]
 
@@ -183,16 +181,39 @@ def test_nn_pbe_composite(name, funcname):
 
 
 @pytest.mark.skipif(not pyscf_found, reason='requires pyscf')
-@pytest.mark.parametrize('name', ['H2', 'LiF', 'NO','F2','CO2','N2C2'])
+@pytest.mark.parametrize('name', ['LiF', 'NO','F2','CO2','N2C2'])
 # @pytest.mark.parametrize('name', ['LiF'])
 @pytest.mark.parametrize('funcname', ['SCAN'])
 def test_nn_scan(name, funcname):
     test_nn_pbe(name, funcname)
 
-@pytest.mark.skipif(not pyscf_found, reason='requires pyscf')
-@pytest.mark.parametrize('name', ['H2', 'LiF', 'NO','F2','CO2','N2C2'])
-# @pytest.mark.parametrize('name', ['LiF'])
-# @pytest.mark.parametrize('funcname', ['revTPSS_X','revTPSS'])
-@pytest.mark.parametrize('funcname', ['revTPSS'])
-def test_nn_revtpss(name, funcname):
-    test_nn_pbe(name, funcname)
+
+def test_nl_exact_x():
+    """ For non-local U model test on one and two-electron systems for which
+    model gives exact exchange energy
+    """
+    from pyscf import gto, dft
+    basis = '6-311++G(3df,2pdf)'
+    mol_input = 'H 0 0 0'
+    mol = gto.M(atom=mol_input, basis=basis, spin=1)
+    mf = pylibnxc.pyscf.UKS(mol, nxc='MGGA_X_TEST_NL', nxc_kind='grid')
+    mf.kernel()
+    assert np.allclose(-0.49982, mf.e_tot, atol=1e-5)
+
+    mol_input = 'H 0 0 0.371395; H 0 0 -0.371395'
+    mol = gto.M(atom=mol_input, basis=basis)
+
+    mf = pylibnxc.pyscf.RKS(mol, nxc='MGGA_X_TEST_NL', nxc_kind='grid')
+    mf.kernel()
+    assert np.allclose(-1.13298 ,mf.e_tot, atol=1e-5)
+
+def test_nl_xc():
+    from pyscf import gto, dft
+    basis = '6-311++G(3df,2pdf)'
+    mol_input = 'H 0 0 0.371395; H 0 0 -0.371395'
+    mol = gto.M(atom=mol_input, basis=basis)
+
+    mf = pylibnxc.pyscf.RKS(mol, nxc='MGGA_XC_TEST_NL', nxc_kind='grid',
+                            grid_level=1)
+    mf.kernel()
+    assert np.allclose(-1.190884, mf.e_tot, atol=1e-5)
