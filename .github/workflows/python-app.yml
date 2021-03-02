@@ -5,7 +5,7 @@ name: pylibnxc test
 
 on:
   push:
-    branches: [ master ]
+    branches: [ ci ]
   pull_request:
     branches: [ master ]
 
@@ -27,4 +27,7 @@ jobs:
     - name: Test with pytest
       run: |
         python -c 'import pylibnxc'
-        pytest -v
+        pytest -v --cov pylibnxc
+    - name: Upload to codecov
+      uses: codecov/codecov-action@v1
+      with: 
