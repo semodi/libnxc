@@ -1,5 +1,6 @@
 [![Documentation Status](https://readthedocs.org/projects/libnxc/badge/?version=latest)](https://libnxc.readthedocs.io/en/latest/?badge=latest)
 ![Python Unit Testing](https://github.com/semodi/libnxc/actions/workflows/python-app.yml/badge.svg)
+[![codecov](https://codecov.io/gh/semodi/libnxc/branch/master/graph/badge.svg?token=PM061YXF17)](https://codecov.io/gh/semodi/libnxc)
 # Lib**n**xc
 
 Libnxc is a libary to use **machine learned** exchange-correlation functionals for density functional theory.
