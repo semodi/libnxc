@@ -1,4 +1,5 @@
 torch>=1.7.1+cpu -f https://download.pytorch.org/whl/torch_stable.html
 pyscf>=1.7
 pytest>=6.2
+pytest-cov>=2.11
 
