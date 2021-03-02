@@ -5,7 +5,7 @@ name: pylibnxc test
 
 on:
   push:
-    branches: [ ci ]
+    branches: [ master ]
   pull_request:
     branches: [ master ]
 
