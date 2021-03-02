@@ -2,8 +2,7 @@
 pylibnxc
 Machine learned density functionals
 """
-#from setuptools import setup
-from numpy.distutils.core import setup
+from setuptools import setup
 
 #short_description = __doc__.split("\n")
 short_description = "Enables the use of machine learned density functionals in electronic structure codes"
