@@ -31,6 +31,10 @@ setup(
     # Additional entries you may want simply uncomment the lines you want and fill in the data
     # author_email='me@place.org',      # Author email
     # url='http://www.my_package.com',  # Website
+    install_requires=["torch>=1.6.0",
+                      "pyscf>=1.7",
+                      "pytest>=1.6",
+                      "pytest-cov>=2.11"],              # Required packages, pulls from pip if needed; do not use for Conda deployment
     # platforms=['Linux',
     #            'Mac OS-X',
     #            'Unix',
