@@ -2,7 +2,7 @@
 pylibnxc
 Machine learned density functionals
 """
-from setuptools import setup
+from setuptools import setup, find_packages
 
 #short_description = __doc__.split("\n")
 short_description = "Enables the use of machine learned density functionals in electronic structure codes"
@@ -23,7 +23,7 @@ setup(
     license='BSD-3-Clause',
 
     # Which Python importable modules should be included when your package is installed
-    packages=['pylibnxc'],
+    packages=find_packages(),
 
     # Optional include package data to ship with your package
     # Comment out this line to prevent the files from being packaged with your software
