@@ -18,8 +18,11 @@ default: libxc.o cuda.o grid.o atomic.o run_all.o
 	./run_all.x
 	@make clean
 
+docker: libxc.o cuda.o grid.o atomic.o run_all.o
+	$(CXX)  /lib/libnxc.so *.o -o run_all.x -pthread $(LDFLAGS) $(GTEST)
+
 .cpp.o:
-	$(CXX) $(CPPFLAGS) -I/usr/local/include/ -I$(TORCH) -I../../src/ $< -c
+	$(CXX) $(CPPFLAGS) -I/usr/local/include/ -I$(TORCH) -I$(GTEST_INCLUDE) -I../../src/ $< -c
 
 clean:
 	@rm *.o *.x

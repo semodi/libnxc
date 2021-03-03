@@ -1,21 +1,22 @@
-CXX = mpic++
+CXX = g++
 CC = g++
-FC = mpif90 --free-form
+FC = gfortran --free-form
 FC_SERIAL = gfortran --free-form
 
-LDFLAGS =-L/usr/lib/ -lgfortran
+LDFLAGS = -lgfortran
 LIBS= $(LD_FLAGS) -lstdc++
 
 # Libtorch location (required)
-TORCH=/home/sebastian/lib/libtorch
+TORCH=/lib/libtorch
 
 # Google test location (optional)
-GTEST= -L/usr/local/lib/gtest -lgtest
+GTEST= -L/lib/googletest/lib/ -lgtest
+GTEST_INCLUDE=/lib/googletest/googletest/include/
 
 # Libxc (optional)
-LIBXC_INCLUDE=-I/opt/etsf/include/
-LIBXC_LD=-L/opt/etsf/lib/ -lxc
-LIBXCDIR=/home/sebastian/Research/libxc-4.3.4/src
+LIBXC_INCLUDE=
+LIBXC_LD=
+LIBXCDIR=
 
 
 # The following parts should remain largely unchanged 
