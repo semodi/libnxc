@@ -44,6 +44,32 @@ TEST(libxc, libxcpbe){
     std::cout << "==========" << std::endl;
   }
 }
+TEST(libxc, libxcscan){
+  double exc1[5];
+  double vrho1[5];
+  double vsigma1[5];
+  double vtau1[5];
+  double exc2[5];
+  double vrho2[5];
+  double vsigma2[5];
+  double vtau2[5];
+  const int nfunc = 1;
+  int func1[nfunc] = {811};
+  int func2[nfunc] = {263};
+
+  for (int j=0; j<nfunc;++j){
+    std::cout << "Comparing" << std::endl;
+    test_func(func1[j], exc1, vrho1, vsigma1, vtau1);
+    std::cout << "to" << std::endl;
+    test_func(func2[j], exc2, vrho2, vsigma2, vtau2);
+    for (int i=0; i<5;++i){
+      EXPECT_LT(abs(exc1[i]-exc2[i]),1e-3);
+      EXPECT_LT(abs(vrho1[i]-vrho2[i]),1e-2);
+      EXPECT_LT(abs(vtau1[i]-vtau2[i]),1e-2);
+    }
+    std::cout << "==========" << std::endl;
+  }
+}
 #endif
 
 TEST(atomic, loadmodelnopar){
