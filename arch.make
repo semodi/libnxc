@@ -11,6 +11,7 @@ TORCH=/home/sebastian/lib/libtorch
 
 # Google test location (optional)
 GTEST= -L/usr/local/lib/gtest -lgtest
+GTEST_INCLUDE=-I/usr/local/include/gtest/
 
 # Libxc (optional)
 LIBXC_INCLUDE=-I/opt/etsf/include/
