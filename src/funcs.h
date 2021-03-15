@@ -19,7 +19,7 @@ const std::map<int,std::string> funcs=
   {812, "MGGA_C_SCAN"},
   {813, "MGGA_XC_SCAN"},
   {814, "MGGA_HM"},
-  {815, "MGGA_XC_CUSTOM"}
+  {815, "MGGA_XC_MCUSTOM"}
 };
 
 const std::map<std::string,int> xctypes=
@@ -36,5 +36,5 @@ const std::map<std::string,int> xctypes=
   {"MGGA_C_SCAN", MGGA_TYPE},
   {"MGGA_XC_SCAN", MGGA_TYPE},
   {"MGGA_HM", MGGA_TYPE},
-  {"MGGA_XC_CUSTOM", MGGA_TYPE}
+  {"MGGA_XC_MCUSTOM", MGGA_TYPE}
 };

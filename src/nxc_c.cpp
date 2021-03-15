@@ -18,5 +18,5 @@ void nxc_c_mgga_exc_vxc(int * xc_func, int np, double rho[], double sigma[], dou
 
 void nxc_c_xc_init(int xc_func, int nspin){
   func_param fp;
-  nxc_func_init(&nxc_func_c, funcs.at(xc_func), fp, nspin);
+  nxc_func_init(&nxc_func_c, funcs.at(xc_func), fp, 1);
 }
