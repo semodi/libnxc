@@ -88,7 +88,7 @@ int main()
   double vrho[5];
   double vsigma[5];
 
-  nxc_func_init(&p, "GGA_PBE", fp, nspin);
+  nxc_func_init(&p, "GGA_XC_PBE", fp, nspin);
 
   nxc_gga_exc_vxc(&p, 5, rho, sigma, exc, vrho, vsigma);
 
@@ -97,7 +97,7 @@ int main()
 
 - `nxc_func_type p` stores the functional
 - `func_param fp` stores parameters that determine how the functional is evaluated and how Libnxc communicates with the external code. For now, it suffices to know that these parameters are set to sensible default values. We will return to it later.
-- `nxc_func_init(&p, "GGA_PBE", fp, nspin)` loads the functional "GGA_PBE", the second argument can either be the name of a shipped functional (see below for a list thereof) or a path to a serialized TorchScript model (at the moment custom models are only available in pylibnxc).
+- `nxc_func_init(&p, "GGA_XC_PBE", fp, nspin)` loads the functional "GGA_PBE", the second argument can either be the name of a shipped functional (see below for a list thereof) or a path to a serialized TorchScript model (at the moment custom models are only available in pylibnxc).
 - `nxc_gga_exc_vxc(&p, 5, rho, sigma, exc, vrho, vsigma)` evaluates the functional and stores the energy per unit particle, and the potential terms $\delta E/ \delta \rho(\mathbf r)$ and $\delta E/ \delta \sigma(\mathbf r)$ in `exc`, `vrho` and `vsigma`, respectively.
 
 
@@ -146,7 +146,7 @@ import numpy as np
 
 if __name__ == '__main__':
 
-    func = LibNXCFunctional("GGA_PBE")
+    func = LibNXCFunctional("GGA_XC_PBE")
     rho = np.array([0.1, 0.2, 0.3, 0.4, 0.5])
     sigma = np.array([0.2, 0.3, 0.4, 0.5, 0.6])
 
@@ -178,7 +178,7 @@ from pyscf import gto
 from pylibnxc.pyscf import RKS
 
 mol = gto.M(atom='H 0 0 0; H 0 0 0.7', basis='6-311G')
-mf = RKS(mol, nxc='GGA_PBE', nxc_kind='grid')
+mf = RKS(mol, nxc='GGA_XC_PBE', nxc_kind='grid')
 mf.kernel()
 ```
 The second version would run a SCF calculation using our machine-learned version of
@@ -193,7 +193,7 @@ Currently, mixing of libxc functionals with libnxc functionals is not supported.
 ## Using Libnxc with Libxc
 
 The simplest way to use machine learned functionals in existing electronic
-structure codes is by linking Libxc with Libnxc. This way any code that supports
+structure codes is by linking Libxc with Libnxc. This way, any code that supports
 Libxc functionals (Quantum Espresso, CP2K, Vasp, Psi4, ...) has access to Libnxc routines.
 This comes with two caveats:
 1) Only grid based functionals are supported through this solution. There is currently
@@ -230,8 +230,17 @@ Please consider citing the paper when using them.
 - **MGGA_HM**: NN-meta-GGA introduced in [1]
 
 
-The following functionals are mainly included for testing purposes and should be used with care. For small molecules an accuracy of about 1 mHartree can be expected.
+The following functionals are only included for testing purposes. For small molecules an accuracy of about 1 mHartree can be expected.
 
-- **GGA_PBE**: Neural Network fitted to reproduce the popular PBE functional
+- **GGA_XC_PBE**: Neural Network fitted to reproduce the popular PBE functional
 - **GGA_X_PBE**: Exchange part of GGA_PBE
 - **GGA_C_PBE**: Correlation part of GGA_PBE
+
+- **MGGA_XC_SCAN**: Neural Network fitted to reproduce the popular PBE functional
+- **MGGA_X_SCAN**: Exchange part of GGA_PBE
+- **MGGA_C_SCAN**: Correlation part of GGA_PBE
+
+## Custom functionals
+
+Entries for the functionals listed above are hard-coded into Libnxc. To include custom functionals without the need to change any code and re-compile
+Libnxc we have added the entries **GGA_XC_CUSTOM** and **MGGA_XC_MCUSTOM**. Using these functionals will instruct Libnxc to look for the corresponding model in the current working directory (e.g. the location from where the DFT calculation is run). This way, any model that follows the form defined in the [documentation](https://libnxc.readthedocs.io/en/latest/functionals.html) can be deployed by copying (or creating a symbolic link of) the custom model into the working directory.
