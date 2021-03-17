@@ -236,9 +236,9 @@ The following functionals are only included for testing purposes. For small mole
 - **GGA_X_PBE**: Exchange part of GGA_PBE
 - **GGA_C_PBE**: Correlation part of GGA_PBE
 
-- **MGGA_XC_SCAN**: Neural Network fitted to reproduce the popular PBE functional
-- **MGGA_X_SCAN**: Exchange part of GGA_PBE
-- **MGGA_C_SCAN**: Correlation part of GGA_PBE
+- **MGGA_XC_SCAN**: Neural Network fitted to reproduce SCAN
+- **MGGA_X_SCAN**: Exchange part of GGA_SCAN
+- **MGGA_C_SCAN**: Correlation part of GGA_SCAN
 
 ## Custom functionals
 
