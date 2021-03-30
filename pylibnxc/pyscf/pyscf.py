@@ -13,6 +13,7 @@ def KS(mol, method, nxc='', nxc_kind='grid', **kwargs):
     """ Wrapper for the pyscf RKS and UKS class
     that uses a libnxc functionals
     """
+    mol.build()
     grid_level = 0
     if 'grid_level' in kwargs:
         grid_level = kwargs.pop('grid_level')
@@ -26,7 +27,7 @@ def KS(mol, method, nxc='', nxc_kind='grid', **kwargs):
         elif nxc_kind.lower() == 'grid':
             parsed_xc = parse_xc_code(nxc)
             if '_NL' in nxc:
-                mf.grids.build()
+                mf.grids.build(with_non0_tab=True)
                 omega = None
                 for code, factor in parsed_xc[1]:
                     model = LibNXCFunctional(code, kind='grid')
@@ -36,7 +37,7 @@ def KS(mol, method, nxc='', nxc_kind='grid', **kwargs):
                              ' omega must be consistent across models')
                     if model.omega:
                         omega = model.omega
-                        
+
                 mf.get_veff = veff_mod_nl(mf, omega,
                                      find_max_level(parsed_xc),
                                      hyb=parsed_xc[0][0],
