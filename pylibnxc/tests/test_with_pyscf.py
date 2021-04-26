@@ -46,6 +46,10 @@ def test_load_atomic():
                                      kind='atomic')
     assert type(func) == pylibnxc.functional.AtomicFunc
 
+def test_load_pyscf_from_path():
+    from pyscf import gto, dft
+    mol = gto.M(atom='O  0  0  0; H  0 1 0 ; H 0 0 1', basis='6-31g*')
+    mf = pylibnxc.pyscf.RKS(mol, nxc='GGA_XC_LOCALPATH', nxc_kind='grid')
 
 @pytest.mark.skipif(not pyscf_found, reason='requires pyscf')
 def test_atomic():
@@ -186,7 +190,6 @@ def test_nn_pbe_composite(name, funcname):
 @pytest.mark.parametrize('funcname', ['SCAN'])
 def test_nn_scan(name, funcname):
     test_nn_pbe(name, funcname)
-
 
 def test_nl_exact_x():
     """ For non-local U model test on one and two-electron systems for which

@@ -16,7 +16,7 @@ void nxc_c_mgga_exc_vxc(int * xc_func, int np, double rho[], double sigma[], dou
   nxc_mgga_exc_vxc(&nxc_func_c, np, rho, sigma, lapl, tau, exc, vrho, vsigma, vlapl_rho, vtau);
 }
 
-void nxc_c_xc_init(int xc_func){
+void nxc_c_xc_init(int xc_func, int nspin){
   func_param fp;
-  nxc_func_init(&nxc_func_c, funcs.at(xc_func), fp, NXC_UNPOLARIZED);
+  nxc_func_init(&nxc_func_c, funcs.at(xc_func), fp, 1);
 }

@@ -55,5 +55,32 @@ The model can then be serialized with ::
   serialized = torch.jit.trace(forward, torch.abs(torch.rand(100,9)))
   torch.jit.save(serialzed, 'MGGA_XC_EXAMPLE/xc')
 
+
+Unless a shipped functional (see below) is being used, models have to be loaded as **GGA_XC_CUSTOM** and **MGGA_XC_MCUSTOM**,
+for GGA and meta-GGA functionals respectively. Using these labels will instruct Libnxc to search for models of the same name in
+the current working directory. This is usually the directory from which the electronic structure calculation is run. To use a custom
+functional, it should either be copied or linked to a model in the working directory with the name **GGA_XC_CUSTOM** or *MGGA_XC_MCUSTOM**.
+
 Shipped functionals
 --------------------
+
+The following functionals were introduced in
+
+[1] *Nagai, Ryo, Ryosuke Akashi, and Osamu Sugino. "Completing density functional theory by machine learning hidden messages from molecules." npj Computational Materials 6.1 (2020): 1-8.*
+
+Please consider citing the paper when using them.
+
+- **LDA_HM**: NN-LSDA introduced in [1]
+- **GGA_HM**: NN-GGA introduced in [1]
+- **MGGA_HM**: NN-meta-GGA introduced in [1]
+
+
+The following functionals are only included for testing purposes. For small molecules an accuracy of about 1 mHartree can be expected.
+
+- **GGA_XC_PBE**: Neural Network fitted to reproduce the popular PBE functional
+- **GGA_X_PBE**: Exchange part of GGA_PBE
+- **GGA_C_PBE**: Correlation part of GGA_PBE
+
+- **MGGA_XC_SCAN**: Neural Network fitted to reproduce the popular PBE functional
+- **MGGA_X_SCAN**: Exchange part of GGA_PBE
+- **MGGA_C_SCAN**: Correlation part of GGA_PBE

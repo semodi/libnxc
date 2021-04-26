@@ -13,12 +13,17 @@ LDFLAGS+=$(LIBXC_LD) -lm
 
 test: test_fort test_c test_c_gga test_fort_gga clean
 
-libxc: t_libxc clean 
+libxc: t_libxc_scan clean 
 	
 t_libxc: test_libxc.o 
 	$(CXX) test_libxc.o ../libnxc.so $(LDFLAGS) -o test_libxc
 	@echo "Testing libxc"
 	@./test_libxc
+
+t_libxc_scan: test_libxc_scan.o 
+	$(CXX) test_libxc_scan.o ../libnxc.so $(LDFLAGS) -o test_libxc_scan
+	@echo "Testing libxc"
+	@./test_libxc_scan
 
 test_fort: test_fort.o
 	$(FC) test_fort.o ../libnxc.so -o test_fort

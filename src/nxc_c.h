@@ -22,7 +22,7 @@ void nxc_c_gga_exc_vxc(int * xc_func, int np, double rho[], double sigma[], doub
 void nxc_c_mgga_exc_vxc(int * xc_func, int np, double rho[], double sigma[],
   double lapl[], double tau[], double exc [], MGGA_OUT_PARAMS_NOEXC(double *));
 
-void nxc_c_xc_init(int xc_func);
+void nxc_c_xc_init(int xc_func, int nspin);
 #ifdef __cplusplus
 }
 #endif

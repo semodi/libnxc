@@ -175,7 +175,6 @@ void GGAFunc::exc_vxc(int np, double rho[], double sigma[],
           sigma_inp = sigma_inp.expand({3,-1})*0.25;
         }
     }
-
     if (gamma){
       sigma_aa = sigma_inp.select(0,0)*sigma_inp.select(0,0) +
                  sigma_inp.select(0,1)*sigma_inp.select(0,1) +

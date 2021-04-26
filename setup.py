@@ -1,12 +1,11 @@
 """
-neuralxc
-Implementation of a machine learned density functional
+pylibnxc
+Machine learned density functionals
 """
-#from setuptools import setup
-from numpy.distutils.core import setup
+from setuptools import setup, find_packages
 
 #short_description = __doc__.split("\n")
-short_description = "hello world"
+short_description = "Enables the use of machine learned density functionals in electronic structure codes"
 
 try:
     with open("README.md", "r") as handle:
@@ -24,7 +23,7 @@ setup(
     license='BSD-3-Clause',
 
     # Which Python importable modules should be included when your package is installed
-    packages=['pylibnxc'],
+    packages=find_packages(),
 
     # Optional include package data to ship with your package
     # Comment out this line to prevent the files from being packaged with your software
@@ -32,12 +31,15 @@ setup(
     # Additional entries you may want simply uncomment the lines you want and fill in the data
     # author_email='me@place.org',      # Author email
     # url='http://www.my_package.com',  # Website
-    # install_requires=[],              # Required packages, pulls from pip if needed; do not use for Conda deployment
+    install_requires=["torch>=1.6.0",
+                      "pyscf>=1.7",
+                      "pytest>=1.6",
+                      "pytest-cov>=2.11"],              # Required packages, pulls from pip if needed; do not use for Conda deployment
     # platforms=['Linux',
     #            'Mac OS-X',
     #            'Unix',
     #            'Windows'],            # Valid platforms your code works on, adjust to your flavor
-    # python_requires=">=3.5",          # Python version restrictions
+    python_requires=">=3.6",          # Python version restrictions
 
     # Manual control if final package is compressible or not, set False to prevent the .egg from being made
     # zip_safe=False,
