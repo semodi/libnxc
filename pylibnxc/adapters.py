@@ -1,6 +1,9 @@
 from abc import ABC, abstractmethod
-from .functional import LibNXCFunctional
+
 import numpy as np
+
+from .functional import LibNXCFunctional
+
 Hartree = 27.211386024367243
 
 

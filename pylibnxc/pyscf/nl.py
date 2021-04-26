@@ -1,18 +1,32 @@
-from .utils import parse_xc_code, find_max_level, get_v_aux
-from pyscf import df
-import scipy
 import numpy as np
-from opt_einsum import contract
-from pyscf import dft
-from ..functional import LibNXCFunctional
+import scipy
 
+from opt_einsum import contract
+from pyscf import df, dft
+
+from ..functional import LibNXCFunctional
+from .utils import find_max_level, get_v_aux, parse_xc_code
 
 
 def veff_mod_nl(mf, omega, max_level, hyb, method):
-    """ Effective potential for functionals involving the (screened) coulomb
-    potential as input
+    """ Closure that defines the effective potential for
+    functionals involving the (screened) coulomb potential as input.
+    A closure is needed here as a persistent reference to mf, which would
+    otherwise be unvailable at this level, is needed.
+
+    Parameters
+    ----------
+    mf, pyscf.scf.KS type object
+    omega, float or iterable of floats
+        range-separation cutoff
+    max_level, int
+        maximum xc-level (0: LDA, 1: GGA, ...)
+    hyb, float
+        global hybrid parameter
+    method, class
+        either pyscf.dft.RKS or pyscf.dft.UKS
     """
-    def block_loop_decorator(func):
+    def block_loop_decorator(gen):
         """ Decorator for the numint.block_loop generator.
         numint.block_loop splits grid into blocks that fit in memory. This decorator is
         used to keep track of the block indices and store it to the mf object.
@@ -21,28 +35,42 @@ def veff_mod_nl(mf, omega, max_level, hyb, method):
             # Equip weights with index column to track block size
             grids = args[1]
             weights = grids.weights
-            grids.weights = np.stack([weights, np.arange(len(weights))], axis = -1)
-            for ao, mask, weight, coords in func(*args,**kwargs):
+            grids.weights = np.stack(
+                [weights, np.arange(len(weights))], axis=-1)
+
+            # Iterate over original generator and save mask in between
+            # iterations
+            for ao, mask, weight, coords in gen(*args, **kwargs):
                 mf.mask_indices = weight[:, 1].astype(int)
-                yield ao, mask, weight[:,0], coords
+                yield ao, mask, weight[:, 0], coords
+
+            # Restore original weight structure
             grids.weights = grids.weights[:, 0]
+
         return block_loop
 
     mol = mf.mol
+    # Generate density fitting basis for memory efficiency
     auxbasis = df.addons.make_auxbasis(mol, mp2fit=False)
     auxmol = df.addons.make_auxmol(mol, auxbasis)
-    df_3c = df.incore.aux_e2(mol, auxmol, 'int3c2e', aosym='s1', comp=1)
-    df_2c = auxmol.intor('int2c2e', aosym='s1', comp=1)
-    df_2c_inv = scipy.linalg.pinv(df_2c)
-    if not isinstance(omega, list):
-        omega = [omega]
-    vh_on_grid = np.stack([get_v_aux(mf.grids.coords, auxmol,o) for o in omega],
-        axis=-1)
+    # Compute gaussian integrals needed to evaluate Hartree potential on grid
+    df_3c = df.incore.aux_e2(mol, auxmol, 'int3c2e', aosym='s1',
+                             comp=1)  # (ij|P)
+    df_2c = auxmol.intor('int2c2e', aosym='s1', comp=1)  # (P|Q)
+    df_2c_inv = scipy.linalg.pinv(df_2c)  # (P|Q)^-1
 
+    omega = list(omega)
+
+    # Hartree potential on grid evaluated in AO basis (ij, p)
+    vh_on_grid = np.stack(
+        [get_v_aux(mf.grids.coords, auxmol, o) for o in omega], axis=-1)
+
+    # Block loop divides grid into blocks; needs to be modified to keep track
+    # of block indices needed for Hartree potential calculation
     mf._numint.block_loop = block_loop_decorator(mf._numint.block_loop)
 
     def eval_xc(xc_code, rho, spin=0, relativity=0, deriv=1, verbose=None):
-        """ Evaluation for grid-based models (not atomic)
+        """ Evaluation for non-local models
             See pyscf documentation of eval_xc
         """
         inp = {}
@@ -66,15 +94,22 @@ def veff_mod_nl(mf, omega, max_level, hyb, method):
             if len(rho_a) > 1:
                 dxa, dya, dza = rho_a[1:4]
                 dxb, dyb, dzb = rho_b[1:4]
-                gamma_a = (dxa**2 + dya**2 + dza**2)  #compute contracted gradients
+                gamma_a = (dxa**2 + dya**2 + dza**2
+                           )  #compute contracted gradients
                 gamma_b = (dxb**2 + dyb**2 + dzb**2)
                 gamma_ab = (dxb * dxa + dyb * dya + dzb * dza)
                 inp['sigma'] = np.stack([gamma_a, gamma_ab, gamma_b])
             if len(rho_a) > 4:
                 inp['lapl'] = np.stack([rho_a[4], rho_b[4]])
                 inp['tau'] = np.stack([rho_a[5], rho_b[5]])
+
+
+# ======= This part differs from the original pyscf implementation: ======
+
         if hasattr(mf, 'U'):
+            # Only use Hartree potential (U) residing on current grid block
             inp['U'] = mf.U[..., mf.mask_indices, :]
+
         parsed_xc = parse_xc_code(xc_code)
         total_output = {'v' + key: 0.0 for key in inp}
         total_output['zk'] = 0
@@ -86,10 +121,13 @@ def veff_mod_nl(mf, omega, max_level, hyb, method):
                 if output[key] is not None:
                     total_output[key] += output[key] * factor
 
-        exc, vlapl, vtau, vrho, vsigma, vU = [total_output.get(key,None)\
+        exc, vlapl, vtau, vrho, vsigma, vU = [total_output.get(key, None)\
           for key in ['zk','vlapl','vtau','vrho','vsigma','vU']]
 
-        mf.vU[..., mf.mask_indices,:] = vU
+        # potential induced by U terms cannot be passed directly via vxc
+        # and needs to be treated in terms of gaussian integrals, hence
+        # store to mf for later processing
+        mf.vU[..., mf.mask_indices, :] = vU
         vxc = (vrho, vsigma, vlapl, vtau)
 
         fxc = None  # 2nd order functional derivative
@@ -97,17 +135,24 @@ def veff_mod_nl(mf, omega, max_level, hyb, method):
         return exc, vxc, fxc, kxc
 
     def get_veff(mol=None, dm=None, dm_last=0, vhf_last=0, hermi=1):
-        mf.U =  contract('mnQ, QP, Pki, ...mn-> ...ki',
-            df_3c, df_2c_inv, vh_on_grid, dm)
+        """ Calculates effective potential
+            See pyscf documentation for details
+        """
+        # Hartree potential
+        mf.U = contract('mnQ, QP, Pki, ...mn-> ...ki', df_3c, df_2c_inv,
+                        vh_on_grid, dm)
         dft.libxc.define_xc_(mf._numint, eval_xc, max_level, hyb=hyb)
+
+        # Potential induced by U-terms
         mf.vU = np.zeros_like(mf.U)
 
         if method == dft.RKS:
             veff = dft.rks.get_veff(mf, mol, dm, dm_last, vhf_last, hermi)
         else:
             veff = dft.uks.get_veff(mf, mol, dm, dm_last, vhf_last, hermi)
-        vU = contract('mnQ, QP, Pki, ...ki,k-> ...mn',
-            df_3c, df_2c_inv, vh_on_grid, mf.vU, mf.grids.weights)
-        veff[:,:] += vU[:,:]
+        vU = contract('mnQ, QP, Pki, ...ki,k-> ...mn', df_3c, df_2c_inv,
+                      vh_on_grid, mf.vU, mf.grids.weights)
+        veff[:, :] += vU[:, :]
         return veff
+
     return get_veff

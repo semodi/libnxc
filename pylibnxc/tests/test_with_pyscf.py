@@ -1,7 +1,10 @@
+import os
+
+import numpy as np
+
 import pylibnxc
 import pytest
-import numpy as np
-import os
+
 try:
     import pyscf
     pyscf_found = True
@@ -46,10 +49,12 @@ def test_load_atomic():
                                      kind='atomic')
     assert type(func) == pylibnxc.functional.AtomicFunc
 
+
 def test_load_pyscf_from_path():
     from pyscf import gto, dft
     mol = gto.M(atom='O  0  0  0; H  0 1 0 ; H 0 0 1', basis='6-31g*')
     mf = pylibnxc.pyscf.RKS(mol, nxc='GGA_XC_LOCALPATH', nxc_kind='grid')
+
 
 @pytest.mark.skipif(not pyscf_found, reason='requires pyscf')
 def test_atomic():
@@ -149,7 +154,7 @@ def test_nn_pbe(name, funcname):
     if name == 'NO':
         mol.spin = 1
     mol.charge = 0
-    mol.verbose=4
+    mol.verbose = 4
     mol.basis = "6-311+G*"
     mol.build()
     results = []
@@ -185,11 +190,12 @@ def test_nn_pbe_composite(name, funcname):
 
 
 @pytest.mark.skipif(not pyscf_found, reason='requires pyscf')
-@pytest.mark.parametrize('name', ['LiF', 'NO','F2','CO2','N2C2'])
+@pytest.mark.parametrize('name', ['LiF', 'NO', 'F2', 'CO2', 'N2C2'])
 # @pytest.mark.parametrize('name', ['LiF'])
 @pytest.mark.parametrize('funcname', ['SCAN'])
 def test_nn_scan(name, funcname):
     test_nn_pbe(name, funcname)
+
 
 def test_nl_exact_x():
     """ For non-local U model test on one and two-electron systems for which
@@ -208,7 +214,8 @@ def test_nl_exact_x():
 
     mf = pylibnxc.pyscf.RKS(mol, nxc='MGGA_X_TEST_NL', nxc_kind='grid')
     mf.kernel()
-    assert np.allclose(-1.13298 ,mf.e_tot, atol=1e-5)
+    assert np.allclose(-1.13298, mf.e_tot, atol=1e-5)
+
 
 def test_nl_xc():
     from pyscf import gto, dft
@@ -216,7 +223,9 @@ def test_nl_xc():
     mol_input = 'H 0 0 0.371395; H 0 0 -0.371395'
     mol = gto.M(atom=mol_input, basis=basis)
 
-    mf = pylibnxc.pyscf.RKS(mol, nxc='MGGA_XC_TEST_NL', nxc_kind='grid',
+    mf = pylibnxc.pyscf.RKS(mol,
+                            nxc='MGGA_XC_TEST_NL',
+                            nxc_kind='grid',
                             grid_level=1)
     mf.kernel()
     assert np.allclose(-1.190884, mf.e_tot, atol=1e-5)

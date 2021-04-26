@@ -1,7 +1,10 @@
-from pylibnxc import LibNXCFunctional
-import pytest
-import numpy as np
 import os
+
+import numpy as np
+
+import pytest
+from pylibnxc import LibNXCFunctional
+
 try:
     import pyscf
     pyscf_found = True
@@ -24,6 +27,7 @@ def test_pbe():
     # np.save('pbe_expected_output.npy',stacked)
     assert np.allclose(np.load(test_dir + '/pbe_expected_output.npy'), stacked)
 
+
 @pytest.mark.skipif(not pyscf_found, reason='requires pyscf')
 def test_pbe_comp_pyscf():
     from pyscf import gto, dft
@@ -39,13 +43,16 @@ def test_pbe_comp_pyscf():
     mol = gto.M(atom='O  0  0  0; H  0 1 0 ; H 0 0 1', basis='6-31g*')
     mf = dft.RKS(mol)
 
-    results_pyscf = mf._numint.eval_xc('GGA_X_PBE', np.concatenate([rho.reshape(1,-1),gamma]))
+    results_pyscf = mf._numint.eval_xc(
+        'GGA_X_PBE', np.concatenate([rho.reshape(1, -1), gamma]))
     results = func.compute(inp)
-    assert np.allclose(results_pyscf[0],results['zk'], atol=1e-6)
-    assert np.allclose(results_pyscf[1][0],results['vrho'], atol=1e-3)
+    assert np.allclose(results_pyscf[0], results['zk'], atol=1e-6)
+    assert np.allclose(results_pyscf[1][0], results['vrho'], atol=1e-3)
+
 
 def test_absolute_path():
     func = LibNXCFunctional(test_dir + "/../../models/GGA_XC_PBE")
+
 
 def test_pbe_gamma():
     func = LibNXCFunctional("GGA_XC_PBE")
@@ -66,6 +73,7 @@ def test_pbe_gamma():
 
     for idx, (st, ref) in enumerate(zip(stacked, reference)):
         assert np.allclose(st, ref)
+
 
 @pytest.mark.skipif(not pyscf_found, reason='requires pyscf')
 def test_scan_comp_pyscf():
@@ -90,14 +98,19 @@ def test_scan_comp_pyscf():
     gamma = np.sqrt(sigma)
     gamma = np.stack(3 * [1 / np.sqrt(3) * gamma], axis=0)
     assert np.allclose(np.sum(gamma**2, axis=0), sigma)
-    inp = {'rho': rho, 'gamma': gamma,'tau':tau}
+    inp = {'rho': rho, 'gamma': gamma, 'tau': tau}
 
     mol = gto.M(atom='O  0  0  0; H  0 1 0 ; H 0 0 1', basis='6-31g*')
     mf = dft.RKS(mol)
 
-    results_pyscf = mf._numint.eval_xc('MGGA_X_SCAN',
-        np.concatenate([rho.reshape(1,-1), gamma, lapl.reshape(1,-1),tau.reshape(1,-1)]))
+    results_pyscf = mf._numint.eval_xc(
+        'MGGA_X_SCAN',
+        np.concatenate([
+            rho.reshape(1, -1), gamma,
+            lapl.reshape(1, -1),
+            tau.reshape(1, -1)
+        ]))
     results = func.compute(inp)
-    assert np.allclose(results_pyscf[0],results['zk'], atol=1e-3)
-    assert np.allclose(results_pyscf[1][0],results['vrho'], atol=1e-2)
-    assert np.allclose(results_pyscf[1][3],results['vtau'], atol=1e-2)
+    assert np.allclose(results_pyscf[0], results['zk'], atol=1e-3)
+    assert np.allclose(results_pyscf[1][0], results['vrho'], atol=1e-2)
+    assert np.allclose(results_pyscf[1][3], results['vtau'], atol=1e-2)

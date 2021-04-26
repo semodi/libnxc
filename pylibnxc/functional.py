@@ -5,11 +5,13 @@ Implementation of a machine learned density functional
 Handles the primary interface that can be accessed by the electronic structure code
 and all other relevant classes
 """
-import numpy as np
 import os
-from glob import glob
-import torch
 from abc import ABC, abstractmethod
+from glob import glob
+
+import numpy as np
+
+import torch
 
 _default_modelpath = os.path.dirname(__file__) + '/../models/'
 
@@ -63,10 +65,10 @@ class NXCFunctional(ABC):
                  torch.jit.load(path + '/xc')
 
         if os.path.exists(path + '/omega'):
-            self.omega = np.genfromtxt(path +'/omega').tolist()
+            self.omega = np.genfromtxt(path + '/omega').tolist()
         else:
             self.omega = []
-            
+
         self.safe_mode = True
 
     def initialize(self):
@@ -146,7 +148,6 @@ class GridFunc(NXCFunctional):
             if 'U' in inp:
                 nl_a, nl_b = U
 
-
         else:
             rho0_a = rho0_b = rho0 * 0.5
             if 'sigma' in inp and not 'gamma' in inp:
@@ -154,7 +155,7 @@ class GridFunc(NXCFunctional):
             if 'tau' in inp:
                 tau_a = tau_b = tau * 0.5
             if 'U' in inp:
-                nl_a = nl_b = U*0.5
+                nl_a = nl_b = U * 0.5
 
         torch_inputs.append(rho0_a.unsqueeze(-1))
         torch_inputs.append(rho0_b.unsqueeze(-1))
@@ -163,10 +164,9 @@ class GridFunc(NXCFunctional):
             torch_inputs.append(sigma_ab.unsqueeze(-1))
             torch_inputs.append(sigma_b.unsqueeze(-1))
         if 'tau' in inp:
-            torch_inputs.append(torch.zeros_like(
-                tau_a.unsqueeze(-1)))  # Expects laplacian in input
-            torch_inputs.append(torch.zeros_like(
-                tau_b.unsqueeze(-1)))  # even though not used
+            torch_inputs.append(torch.zeros_like(tau_a.unsqueeze(
+                -1)))  # Expects laplacian in input even though not used
+            torch_inputs.append(torch.zeros_like(tau_b.unsqueeze(-1)))
             torch_inputs.append(tau_a.unsqueeze(-1))
             torch_inputs.append(tau_b.unsqueeze(-1))
         if 'U' in inp:
@@ -175,7 +175,6 @@ class GridFunc(NXCFunctional):
 
         torch_inputs = torch.cat(torch_inputs, dim=-1)
         exc = self.energy_model(torch_inputs)[:, 0]
-        assert exc.dim() == 1
         E = torch.dot(exc, torch_inputs[:, 0] + torch_inputs[:, 1])
 
         if do_vxc:

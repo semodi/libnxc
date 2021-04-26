@@ -1,6 +1,7 @@
 import pyscf.dft as dft
-from pyscf.dft.libxc import parse_xc
 from pyscf import gto
+from pyscf.dft.libxc import parse_xc
+
 
 def find_in_codes(code):
 
@@ -59,14 +60,17 @@ def find_max_level(parsed_xc):
 
     return highest_xc
 
+
 def get_v_aux(cs, mol, omega=0):
-    fakemol = gto.fakemol_for_charges(cs,)
-#     return df.incore.aux_e2(mol, fakemol, intor='int3c2e')
+    fakemol = gto.fakemol_for_charges(cs, )
     tot_mol = mol + fakemol
-    full = tot_mol.intor('int2c2e', shls_slice=[0, mol.nbas, mol.nbas, mol.nbas + fakemol.nbas])
+    full = tot_mol.intor(
+        'int2c2e', shls_slice=[0, mol.nbas, mol.nbas, mol.nbas + fakemol.nbas])
     if omega:
         tot_mol.set_range_coulomb(omega)
-        rs = tot_mol.intor('int2c2e', shls_slice=[0, mol.nbas, mol.nbas, mol.nbas + fakemol.nbas])
+        rs = tot_mol.intor(
+            'int2c2e',
+            shls_slice=[0, mol.nbas, mol.nbas, mol.nbas + fakemol.nbas])
     else:
         rs = 0
     return full - rs

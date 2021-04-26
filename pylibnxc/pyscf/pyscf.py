@@ -1,17 +1,20 @@
-from pyscf import dft
-from pyscf.lib.numpy_helper import NPArrayWithTag
-from ..adapters import PySCFNXC, NXCAdapter, get_nxc_adapter
-from ..functional import AtomicFunc, GridFunc, HMFunc, LibNXCFunctional
-from .utils import parse_xc_code, find_max_level
-from .nl import veff_mod_nl
-import numpy as np
 import os
 from functools import partial
+
+import numpy as np
+
+from pyscf import dft
+from pyscf.lib.numpy_helper import NPArrayWithTag
+
+from ..adapters import NXCAdapter, PySCFNXC, get_nxc_adapter
+from ..functional import AtomicFunc, GridFunc, HMFunc, LibNXCFunctional
+from .nl import veff_mod_nl
+from .utils import find_max_level, parse_xc_code
 
 
 def KS(mol, method, nxc='', nxc_kind='grid', **kwargs):
     """ Wrapper for the pyscf RKS and UKS class
-    that uses a libnxc functionals
+    that uses libnxc functionals
     """
     mol.build()
     grid_level = 0
@@ -20,28 +23,30 @@ def KS(mol, method, nxc='', nxc_kind='grid', **kwargs):
     mf = method(mol, **kwargs)
     if grid_level:
         mf.grids.level = grid_level
-    if nxc != '':
+    if nxc:
         if nxc_kind.lower() == 'atomic':
             model = get_nxc_adapter('pyscf', nxc)
             mf.get_veff = veff_mod_atomic(mf, model)
         elif nxc_kind.lower() == 'grid':
             parsed_xc = parse_xc_code(nxc)
+            # Non-local functional needs special treatment
             if '_NL' in nxc:
                 mf.grids.build(with_non0_tab=True)
                 omega = None
                 for code, factor in parsed_xc[1]:
                     model = LibNXCFunctional(code, kind='grid')
-                    if not omega is None:
-                        if not omega == model.omega and model.omega:
-                            raise Exception('ModelError: Range separation parameter' +\
+                    if omega is not None:
+                        if omega != model.omega and model.omega:
+                            raise RuntimeError('ModelError: Range separation parameter' +\
                              ' omega must be consistent across models')
                     if model.omega:
                         omega = model.omega
 
-                mf.get_veff = veff_mod_nl(mf, omega,
-                                     find_max_level(parsed_xc),
-                                     hyb=parsed_xc[0][0],
-                                     method=method)
+                mf.get_veff = veff_mod_nl(mf,
+                                          omega,
+                                          find_max_level(parsed_xc),
+                                          hyb=parsed_xc[0][0],
+                                          method=method)
             else:
                 dft.libxc.define_xc_(mf._numint,
                                      eval_xc,
@@ -60,7 +65,7 @@ UKS = partial(KS, method=dft.UKS)
 
 
 def eval_xc(xc_code, rho, spin=0, relativity=0, deriv=1, verbose=None):
-    """ Evaluation for grid-based models (not atomic)
+    """ Evaluation for grid-based libnxc models (not atomic)
         See pyscf documentation of eval_xc
     """
     inp = {}
@@ -96,6 +101,7 @@ def eval_xc(xc_code, rho, spin=0, relativity=0, deriv=1, verbose=None):
     total_output = {'v' + key: 0.0 for key in inp}
     total_output['zk'] = 0
 
+    # ======= This part differs from the original pyscf implementation: ======
     for code, factor in parsed_xc[1]:
         model = LibNXCFunctional(code, kind='grid')
         output = model.compute(inp)
