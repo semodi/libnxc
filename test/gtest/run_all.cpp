@@ -18,6 +18,31 @@ TEST(cuda, sendmodel){
 #endif
 
 #ifdef LIBXC
+TEST(libxc, libxclda){
+  double exc1[5];
+  double vrho1[5];
+  double vsigma1[5];
+  double vtau1[5];
+  double exc2[5];
+  double vrho2[5];
+  double vsigma2[5];
+  double vtau2[5];
+  const int nfunc = 2;
+  int func1[nfunc] = {821, 822};
+  int func2[nfunc] = {1, 12};
+
+  for (int j=0; j<nfunc;++j){
+    std::cout << "Comparing" << std::endl;
+    test_func(func1[j], exc1, vrho1, vsigma1, vtau1);
+    std::cout << "to" << std::endl;
+    test_func(func2[j], exc2, vrho2, vsigma2, vtau2);
+    for (int i=0; i<5;++i){
+      EXPECT_LT(abs(exc1[i]-exc2[i]),1e-8);
+      EXPECT_LT(abs(vrho1[i]-vrho2[i]),1e-8);
+    }
+    std::cout << "==========" << std::endl;
+  }
+}
 TEST(libxc, libxcpbe){
   double exc1[5];
   double vrho1[5];
@@ -134,8 +159,8 @@ TEST(grid, testhmgga){
     double vsigma_p[300];
     double exc_p[100];
     int cuda=0;
-    // for (cuda=0;cuda<test_cuda()+1;++cuda){
-    for (cuda=0;cuda< 1;++cuda){
+    for (cuda=0;cuda<test_cuda()+1;++cuda){
+    // for (cuda=0;cuda< 1;++cuda){
       test_hm_gga(vrho_up, vsigma_up, exc_up, vrho_p, vsigma_p, exc_p, cuda);
 
       // Compare spin-polarized to unpolarized results and check

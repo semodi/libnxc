@@ -35,7 +35,7 @@ libxc_la_FUNC_SOURCES = \
 	special_functions.c bessel.c expint_e1.c integrate.c util.c	\
 	mix_func.c func_info.c functionals.c version.c func_reference.c \
 	lda.c \
-	lda_x.c lda_x_1d.c lda_x_2d.c lda_c_wigner.c lda_c_gombas.c	\
+	lda_x.c lda_x_nxc.c lda_x_1d.c lda_x_2d.c lda_c_wigner.c lda_c_gombas.c	\
 	lda_c_rpa.c lda_c_hl.c lda_c_vwn.c lda_c_vwn_1.c lda_c_vwn_2.c  \
 	lda_c_vwn_3.c lda_c_vwn_4.c lda_c_vwn_rpa.c lda_c_pz.c          \
 	lda_c_pw.c lda_c_pk09.c lda_c_lp96.c \

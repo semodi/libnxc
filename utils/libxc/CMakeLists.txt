@@ -287,6 +287,7 @@ util.c
 version.c
 mgga_x_nxc.c
 gga_x_nxc.c
+lda_x_nxc.c
 )
 
 set(src_prefix "src/")
@@ -377,7 +378,7 @@ if(BUILD_TESTING)
              DOC "Path to zipping utility")
     if(BZip2_EXECUTABLE)
         enable_testing ()
-        add_subdirectory(testsuite)  
+        add_subdirectory(testsuite)
     else()
         message(FATAL_ERROR "Install `bzip2` command to enable tests")
     endif()

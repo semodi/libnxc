@@ -6,6 +6,11 @@
 // #include "nxc_func.h"
 nxc_func_type nxc_func_c;
 
+void nxc_c_lda_exc_vxc(int * xc_func, int np, double rho[],
+  double exc [], LDA_OUT_PARAMS_NOEXC(double *)){
+  nxc_lda_exc_vxc(&nxc_func_c, np, rho,exc, vrho);
+}
+
 void nxc_c_gga_exc_vxc(int * xc_func, int np, double rho[], double sigma[],
   double exc [], GGA_OUT_PARAMS_NOEXC(double *)){
   nxc_gga_exc_vxc(&nxc_func_c, np, rho, sigma, exc, vrho, vsigma);

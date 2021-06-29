@@ -1,6 +1,5 @@
 #include "util.h"
 #include "nxc_c.h"
-// #include "nxc_c_gga.h"
 
 #define XC_MGGA_X_NSCAN          811 /* Machine learned SCAN X functional                */
 #define XC_MGGA_C_NSCAN          812 /* Machine learned SCAN C functional                */
