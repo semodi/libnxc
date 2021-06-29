@@ -9,19 +9,18 @@ std::shared_ptr<NXCFunc> get_functional(std::string model)
                   if (p.second == model)
                     found = true;
                 });
+    if (found)
+        switch(xctypes.at(model)){
+          case LDA_TYPE:
+             return std::make_shared<LDAFunc>(model);
+             break;
+          case GGA_TYPE:
+             return std::make_shared<GGAFunc>(model);
+             break;
+          case MGGA_TYPE:
+             return std::make_shared<MGGAFunc>(model);
+             break;
+           }
 
-  if (found)
-      switch(xctypes.at(model)){
-        case LDA_TYPE:
-           return std::make_shared<LDAFunc>(model);
-           break;
-        case GGA_TYPE:
-           return std::make_shared<GGAFunc>(model);
-           break;
-        case MGGA_TYPE:
-           return std::make_shared<MGGAFunc>(model);
-           break;
-         }
-
-  return std::make_shared<AtomicFunc>(model);
+    return std::make_shared<AtomicFunc>(model);
 }

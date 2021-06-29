@@ -1,9 +1,9 @@
 #include <map>
 
-const int LDA_TYPE=0;
-const int GGA_TYPE=1;
-const int MGGA_TYPE=2;
-const int ATOMIC_TYPE=4;
+const int LDA_TYPE=1;
+const int GGA_TYPE=2;
+const int MGGA_TYPE=4;
+const int ATOMIC_TYPE=5;
 
 const std::map<int,std::string> funcs=
 {

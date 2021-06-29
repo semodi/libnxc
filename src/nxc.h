@@ -76,8 +76,8 @@ void nxc_use_cuda();
 * @param[in, optional] fp functional parameters
 * @param[in, optional] nspin spin polarized/unpolarized calcuation (default NXC_UNPOLARIZED)
 */
-void nxc_func_init(nxc_func_type* p, std::string model, func_param fp, int nspin=NXC_UNPOLARIZED);
-void nxc_func_init(nxc_func_type* p, std::string model, int nspin=NXC_UNPOLARIZED);
+int nxc_func_init(nxc_func_type* p, std::string model, func_param fp, int nspin=NXC_UNPOLARIZED);
+int nxc_func_init(nxc_func_type* p, std::string model, int nspin=NXC_UNPOLARIZED);
 
 /**
 * Evaluates the functional on provided density if functional is LDA type. This includes atomic functionals

@@ -1,6 +1,6 @@
 .SUFFIXES: .o .F90 .f90 .F .f .a
-
-default: test
+.PHONY: test libxc all gtest
+default: all
 
 ARCH_MAKE_DEFAULT=../arch.make
 ARCH_MAKE?=$(ARCH_MAKE_DEFAULT)
@@ -11,19 +11,36 @@ include $(ARCH_MAKE)
 CPPFLAGS+=-DLIBXC $(LIBXC_INCLUDE)
 LDFLAGS+=$(LIBXC_LD) -lm
 
-test: test_fort test_c test_c_gga test_fort_gga clean
+test: test_fort test_c test_c_gga test_fort_gga test_py_gga clean
 
 libxc: t_libxc_scan clean 
-	
+
+all:  test libxc t_gtest
+gtest: t_gtest
+
+
+t_gtest: 
+ifdef GTEST
+	cd gtest && $(MAKE)
+else
+	@echo "gtest env variable not set, skipping..."
+endif 
+
 t_libxc: test_libxc.o 
+ifdef LIBXCDIR
 	$(CXX) test_libxc.o ../libnxc.so $(LDFLAGS) -o test_libxc
 	@echo "Testing libxc"
 	@./test_libxc
+else
+	@echo "not using libxc, skipping..."
+endif 
 
 t_libxc_scan: test_libxc_scan.o 
+ifdef LIBXCDIR
 	$(CXX) test_libxc_scan.o ../libnxc.so $(LDFLAGS) -o test_libxc_scan
 	@echo "Testing libxc"
 	@./test_libxc_scan
+endif
 
 test_fort: test_fort.o
 	$(FC) test_fort.o ../libnxc.so -o test_fort
@@ -45,20 +62,16 @@ test_c_gga: test_c_gga.o
 	@echo "Testing PBE model in C++"
 	@./test_c_gga
 
+test_py_gga: test_c_gga.o
+	@echo "Testing PBE model in Python"
+	@python  test_py_gga.py
+	
 test_fort.o:
 	$(FC) -c test_fort.f
 
 test_fort_gga.o:
 	$(FC) -c test_fort_gga.f
 
-# test_c.o:
-# 	$(CXX) -c test_c.cpp -I$(TORCH) -I../src/
-#
-# test_c_gga.o:
-# 	$(CXX) -c test_c_gga.cpp -I$(TORCH) -I../src/
-#
-# test_libxc.o:
-# 	$(CXX) $(CPPFLAGS) -c test_libxc.cpp
 
 .cpp.o:
 	$(CXX) $(CPPFLAGS) -I/usr/local/include/ -I$(TORCH) -I../src/ $< -c
@@ -69,4 +82,4 @@ clean:
 	@rm -f test_c
 	@rm -f test_c_gga
 	@rm -f test_fort_gga
-	@rm  test_libxc
+	@rm -f test_libxc_scan
