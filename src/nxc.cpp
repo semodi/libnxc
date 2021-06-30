@@ -4,15 +4,25 @@
 #include <memory>
 #include "nxc.h"
 
-void nxc_func_init(nxc_func_type* p, std::string model, func_param fp, int nspin){
-    std::shared_ptr<NXCFunc> f = get_functional(model);
-    f->init(fp, nspin);
-    p->func = f;
+int nxc_func_init(nxc_func_type* p, std::string model, func_param fp, int nspin){
+    try{
+      std::shared_ptr<NXCFunc> f = get_functional(model);
+      f->init(fp, nspin);
+      p->func = f;
+      return 0;
+    }catch (const c10::Error& e) {
+      return -1;
+    }
 }
 
-void nxc_func_init(nxc_func_type* p, std::string model, int nspin){
-    std::shared_ptr<NXCFunc> f = get_functional(model);
-    p->func = f;
+int nxc_func_init(nxc_func_type* p, std::string model, int nspin){
+    try{
+      std::shared_ptr<NXCFunc> f = get_functional(model);
+      p->func = f;
+      return 0;
+    }catch (const c10::Error& e) {
+      return -1;
+    }
 }
 
 void nxc_lda_exc_vxc(nxc_func_type* p, int np, double rho[], double exc[], double vrho[]){

@@ -1,4 +1,4 @@
-FROM rikorose/gcc-cmake
+FROM rikorose/gcc-cmake:gcc-10
 
 WORKDIR /lib
 

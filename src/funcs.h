@@ -1,9 +1,9 @@
 #include <map>
 
-const int LDA_TYPE=0;
-const int GGA_TYPE=1;
-const int MGGA_TYPE=2;
-const int ATOMIC_TYPE=4;
+const int LDA_TYPE=1;
+const int GGA_TYPE=2;
+const int MGGA_TYPE=4;
+const int ATOMIC_TYPE=5;
 
 const std::map<int,std::string> funcs=
 {
@@ -12,14 +12,15 @@ const std::map<int,std::string> funcs=
   {802, "GGA_C_PBE"},
   {803, "GGA_XC_PBE"},
   {804, "GGA_HM"},
-  {805, "GGA_KSR"},
   {806, "GGA_XC_CUSTOM"},
   {810, "MGGA_X_PBE"},
   {811, "MGGA_X_SCAN"},
   {812, "MGGA_C_SCAN"},
   {813, "MGGA_XC_SCAN"},
   {814, "MGGA_HM"},
-  {815, "MGGA_XC_MCUSTOM"}
+  {815, "MGGA_XC_MCUSTOM"},
+  {821, "LDA_X_NUEG"},
+  {822, "LDA_C_NPW92"}
 };
 
 const std::map<std::string,int> xctypes=
@@ -36,5 +37,7 @@ const std::map<std::string,int> xctypes=
   {"MGGA_C_SCAN", MGGA_TYPE},
   {"MGGA_XC_SCAN", MGGA_TYPE},
   {"MGGA_HM", MGGA_TYPE},
-  {"MGGA_XC_MCUSTOM", MGGA_TYPE}
+  {"MGGA_XC_MCUSTOM", MGGA_TYPE},
+  {"LDA_X_NUEG", LDA_TYPE},
+  {"LDA_C_NPW92", LDA_TYPE}
 };

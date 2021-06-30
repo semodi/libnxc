@@ -16,7 +16,7 @@ void test_func(int func_id, double exc[], double vrho[],
   switch(func.info->family)
     {
     case XC_FAMILY_LDA:
-      xc_lda_exc(&func, 5, rho, exc);
+      xc_lda_exc_vxc(&func, 5, rho, exc, vrho);
       break;
     case XC_FAMILY_GGA:
     case XC_FAMILY_HYB_GGA:

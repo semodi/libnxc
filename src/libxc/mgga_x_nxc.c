@@ -1,6 +1,5 @@
 #include "util.h"
 #include "nxc_c.h"
-// #include "nxc_c_gga.h"
 
 #define XC_MGGA_X_NSCAN          811 /* Machine learned SCAN X functional                */
 #define XC_MGGA_C_NSCAN          812 /* Machine learned SCAN C functional                */
@@ -11,7 +10,10 @@
 static void
 mgga_nxc_init(xc_func_type *p)
 {
-  nxc_c_xc_init(p->info->number, p->nspin);
+  if(nxc_c_xc_init(p->info->number, p->nspin)){
+    fprintf(stderr, "Internal error in libnxc functional\n");
+    exit(1);
+  }
 }
 
 
