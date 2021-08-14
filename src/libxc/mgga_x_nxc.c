@@ -6,6 +6,7 @@
 #define XC_MGGA_XC_NSCAN         813 /* Machine learned SCAN XC functional                */
 #define XC_MGGA_XC_HM            814 /* Machine learned "Hidden messages" MGGA XC functional */
 #define XC_MGGA_XC_MCUSTOM        815 /* Machine learned custom MGGA XC functional */
+#define XC_MGGA_XC_XCDIFF         816 /* MGGA functional obtained with differentiable programming */
 
 static void
 mgga_nxc_init(xc_func_type *p)
@@ -71,6 +72,19 @@ const xc_func_info_type xc_func_info_mgga_xc_hm = {
 
 const xc_func_info_type xc_func_info_mgga_xc_mcustom = {
   XC_MGGA_XC_MCUSTOM,
+  XC_EXCHANGE_CORRELATION,
+  "Neural network custom MGGA exchange-correlation",
+  XC_FAMILY_MGGA,
+  {NULL, NULL, NULL, NULL, NULL},
+  XC_FLAGS_3D | XC_FLAGS_HAVE_EXC | XC_FLAGS_HAVE_VXC,
+  1e-32,
+  0, NULL, NULL,
+  mgga_nxc_init, NULL,
+  NULL, NULL, nxc_c_mgga_exc_vxc
+};
+
+const xc_func_info_type xc_func_info_mgga_xc_xcdiff = {
+  XC_MGGA_XC_XCDIFF,
   XC_EXCHANGE_CORRELATION,
   "Neural network custom MGGA exchange-correlation",
   XC_FAMILY_MGGA,
