@@ -2,6 +2,8 @@
 ![Python Unit Testing](https://github.com/semodi/libnxc/actions/workflows/python-app.yml/badge.svg)
 ![Build](https://github.com/semodi/libnxc/actions/workflows/build.yml/badge.svg)
 [![codecov](https://codecov.io/gh/semodi/libnxc/branch/master/graph/badge.svg?token=PM061YXF17)](https://codecov.io/gh/semodi/libnxc)
+
+## NOTE: This project has been deprecated by https://github.com/marivifsSBU/libnxc
 # Lib**n**xc
 
 Libnxc is a libary to use **machine learned** exchange-correlation functionals for density functional theory.
